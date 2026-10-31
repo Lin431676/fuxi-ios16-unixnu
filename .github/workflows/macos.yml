@@ -216,6 +216,20 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: ./unixnu build kernel
 
+      # xnu runs its recipes quietly, so a failing compiler line can end as a bare `make: *** [target]
+      # Error 2` with no message. The step logs keep the text; reprint the error lines so the job log
+      # (which stays small) is enough to diagnose the run.
+      - name: Kernel log tail
+        if: always()
+        run: |
+          shopt -s nullglob
+          for log in "$GITHUB_WORKSPACE"/out/*/*/*/logs/*.log; do
+            echo "== $log ($(wc -l < "$log") lines)"
+            grep -nE 'error:|ERROR|\*\*\* \[' "$log" | tail -n 40 || true
+            echo '== tail'
+            tail -n 40 "$log"
+          done
+
       - name: Build userdata
         id: userdata
         if: contains(inputs.steps, 'userdata')
