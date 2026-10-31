@@ -1,6 +1,7 @@
 """Ordered XNU patch series and target-local source preparation."""
 import hashlib
 import json
+import os
 import shutil
 
 from .profiles import resolve_path
@@ -36,7 +37,11 @@ def prepare(ctx, modules):
     if not module or module.path is None:
         raise Error('XNU source missing; run unixnu fetch')
     revision = git(module.path, 'rev-parse', 'HEAD').strip()
-    signature = {'source': str(module.path), 'commit': revision,
+    # A series may also name shell scripts: a device stages the upstream sources a later patch edits
+    # (libpthread, BearSSL, HFS) by running them in the work tree before the patches are applied.
+    # The variables they need are the device's to declare, in [kernel] patch_env.
+    stage_env = {str(name): str(value) for name, value in ctx.board.get('kernel', {}).get('patch_env', {}).items()}
+    signature = {'source': str(module.path), 'commit': revision, 'stage_env': stage_env,
                  'patches': [{'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
                              for path in selected]}
     work = ctx.tree / '.cache/xnu-work'
@@ -54,6 +59,14 @@ def prepare(ctx, modules):
         run(['git', 'clone', '--quiet', '--shared', '--no-checkout', module.path, work])
         git(work, 'checkout', '--quiet', '--detach', revision)
         for path in selected:
+            if path.suffix == '.sh':
+                log(f'kernel: stage {path.name}')
+                try:
+                    run(['bash', str(path)], cwd=work, env={**os.environ, **stage_env})
+                except Error as error:
+                    shutil.rmtree(work)
+                    raise Error(f'XNU stage {path}: {error}') from error
+                continue
             log(f'kernel: patch {path.name}')
             try:
                 git(work, 'apply', str(path))
@@ -64,5 +77,5 @@ def prepare(ctx, modules):
         run(['python3', ctx.tree / 'scripts/prepare-xnu-source.py'], cwd=ctx.tree)
         stamp.write_text(json.dumps(signature, indent=2) + '\n')
     patch_list = ctx.work / 'xnu-patches.list'
-    patch_list.write_text(''.join(str(path) + '\n' for path in selected))
+    patch_list.write_text(''.join(str(path) + '\n' for path in selected if path.suffix == '.patch'))
     return patch_list
