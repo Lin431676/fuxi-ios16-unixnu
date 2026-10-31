@@ -1,0 +1,5 @@
+# Patches of the iOS 16.7.16 OS layer, applied before the device series.
+#
+# The 8796 kernel needs no OS-level patch yet: the prelink tags that xnu-10063 needs
+# (security-init, sparse-index) belong to kits/XnuPrelink's 10063 inputs and do not
+# apply to this tree.

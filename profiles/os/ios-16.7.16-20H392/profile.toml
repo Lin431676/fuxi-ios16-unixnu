@@ -1,0 +1,130 @@
+
+["os"]
+"name" = "ios-16.7.16-20H392"
+"darwin" = "22.6.0"
+"xnu_version" = "8796.141.3"
+"xnu_revision" = "1b191cb58250d0705d8a51287127505aa4bc0789"
+"driverkit_tag" = "xnu-8796.101.5"
+"trustcache_tag" = "xnu-8796.101.5"
+# IOHIDFamily-1915.140.3 is the HID event library of the 16.7 userland; the window server
+# takes its event queue and the virtual touch service through it.
+"abi" = ["IOHIDFamily-1915.140.3", "IOMobileGraphicsFamily"]
+
+
+["ipsw"]
+"url" = "https://updates.cdn-apple.com/2025FallFCS/fullrestores/122-77006/1158E502-D76D-4226-AA06-ED5E30CD1111/iPhone10,3,iPhone10,6_16.7.16_20H392_Restore.ipsw"
+"product" = "iPhone10,3"
+"version" = "16.7.16"
+"build" = "20H392"
+"device_class" = "d22ap"
+"chip_id" = 32789
+"board_id" = 6
+"fetch" = ["KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache"]
+
+
+["kernel"]
+
+["kernel"."prelink"]
+"tool" = "kits/XnuPrelink/emit_prelink.py"
+"kernel" = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
+"kernelcache_sha256" = "2ec297bac95bcba01046fd0148e97e7e5885c05a6c18827f39f534ba375c1221"
+"slide" = "-0x1000000"
+# early_security_init is deliberately absent: emit_prelink only patches the AMFI
+# initializer when the board supplies its address, and validates that the address sits
+# inside original module code. Neither the sheng value (iPadOS 17.7.11) nor the address
+# published by Xyvern08371/unixnu-fuxi is valid for this kernelcache, so the prelink
+# stopped with "Early security initializer outside original module code".
+"roots" = [
+  # com.apple.kec.corecrypto is left out: fuxi bootstraps crypto from source
+  # (CONFIG_XNU_CRYPTO_BOOTSTRAP="source"), so the kernel already carries
+  # corecrypto_kext_start() and its own registration order. Keeping the prelinked Apple
+  # kext as well runs a second entropy initialisation whose SHA512_Init calls this
+  # kernel's code before g_crypto_funcs is set: a data abort at _SHA512_Init + 0x10,
+  # far 0x40.
+  "com.apple.AppleFSCompression.AppleFSCompressionTypeZlib",
+  "com.apple.driver.AppleARMPlatform",
+  "com.apple.driver.AppleARMWatchdogTimer",
+  "com.apple.driver.AppleAudioClockLibs",
+  "com.apple.driver.AppleEffaceableStorage",
+  "com.apple.driver.AppleIISController",
+  "com.apple.driver.AppleM2ScalerCSCDriver",
+  "com.apple.driver.AppleMobileFileIntegrity",
+  "com.apple.driver.ApplePMGR",
+  "com.apple.driver.IODARTFamily",
+  "com.apple.filesystems.apfs",
+  "com.apple.iokit.CoreAnalyticsFamily",
+  "com.apple.iokit.IOAVFamily",
+  "com.apple.iokit.IOAudio2Family",
+  "com.apple.iokit.IOCECFamily",
+  "com.apple.iokit.IOCryptoAcceleratorFamily",
+  "com.apple.iokit.IOGPUFamily",
+  "com.apple.iokit.IOHDCPFamily",
+  "com.apple.iokit.IOMobileGraphicsFamily",
+  "com.apple.iokit.IOReportFamily",
+  "com.apple.iokit.IOSlowAdaptiveClockingFamily",
+  "com.apple.iokit.IOSurface",
+  "com.apple.kec.Libm",
+  "com.apple.kext.AppleMatch",
+  "com.apple.kext.CoreTrust",
+  "com.apple.security.AppleImage4",
+  "com.apple.security.sandbox",
+  "com.apple.iokit.IOHIDFamily",
+  "com.apple.iokit.IOHIDEventDriver",
+]
+
+
+["payload"]
+# No dyld shared cache fixups yet: they key on the 16.7.16 cache's own offsets and are
+# added once a boot reaches the point where the cache is mapped.
+"text_fixups" = []
+
+
+["adt"]
+
+["adt"."root"]
+
+["adt"."root"."string"]
+"model" = "iPhone10,3"
+"target-type" = "D22"
+# The board name first: the audio server keys its routing database and MediaExperience
+# its per-board tables on it.
+"compatible" = "D22AP"
+
+
+["adt"."chosen"]
+
+["adt"."chosen"."string"]
+"osenvironment" = "main"
+"crypto-hash-method" = "sha2-384"
+
+["adt"."chosen"."u32"]
+"certificate-production-status" = 0
+"effective-production-status-ap" = 0
+"certificate-security-mode" = 1
+"effective-security-mode-sep" = 1
+"amfi-only-platform-code" = 1
+
+
+["adt"."product"]
+
+["adt"."product"."string"]
+"product-name" = "iPhone X"
+"product-description" = "iPhone X"
+"artwork-device-idiom" = "phone"
+"artwork-display-gamut" = "P3"
+
+["adt"."product"."u32"]
+"artwork-device-subtype" = 2436
+"artwork-scale-factor" = 3
+
+# TODO(identity): product-id (the 20-byte value MGGetProductType looks up in
+# libMobileGestalt's table) and compatible-device-fallback have to be read out of the
+# d22ap DeviceTree of this IPSW (unixnu ipsw fetch DeviceTree) before a userspace test
+# that switches on the product type can pass. Left out rather than copied from another
+# product.
+
+
+["adt"."defaults"]
+
+["adt"."defaults"."u32"]
+"kern.maxvnodes" = 66560
