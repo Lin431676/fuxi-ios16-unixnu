@@ -112,16 +112,22 @@
 "product-description" = "iPhone X"
 "artwork-device-idiom" = "phone"
 "artwork-display-gamut" = "P3"
+# The fallback is a different product by design: it is what the iPhone X reports when the
+# userland asks for an identity this platform does not carry.
+"compatible-device-fallback" = "iPhone9,2"
 
 ["adt"."product"."u32"]
 "artwork-device-subtype" = 2436
 "artwork-scale-factor" = 3
 
-# TODO(identity): product-id (the 20-byte value MGGetProductType looks up in
-# libMobileGestalt's table) and compatible-device-fallback have to be read out of the
-# d22ap DeviceTree of this IPSW (unixnu ipsw fetch DeviceTree) before a userspace test
-# that switches on the product type can pass. Left out rather than copied from another
-# product.
+# Read out of this IPSW's DeviceTree, not copied from another product: member
+# Firmware/all_flash/DeviceTree.d22ap.im4p of the d22ap Erase identity (its BuildManifest
+# "DeviceTree"), an IM4P whose payload is an LZFSE (bvx2) Apple Device Tree. The property is
+# 20 bytes stored as five little-endian u32 words (0x299b07fd 0xdea74481 0x7fc8d7b4
+# 0x74b43eef 0xebe7f0d8), so the hex string is the byte order of the value itself and the
+# first byte is the low byte of the first word.
+["adt"."product"."bytes"]
+"product-id" = "fd079b298144a7deb4d7c87fef3eb474d8f0e7eb"
 
 
 ["adt"."defaults"]
