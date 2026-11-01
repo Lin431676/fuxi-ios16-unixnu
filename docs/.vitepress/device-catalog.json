@@ -85,6 +85,11 @@
     "title_zh": "小米 9（cepheus）"
   },
   {
+    "name": "cepheus-c0der88",
+    "title": "Xiaomi Mi 9 (c0der88)",
+    "title_zh": "Xiaomi Mi 9 (c0der88)"
+  },
+  {
     "name": "cepheus-yangqi0408",
     "title": "Xiaomi Mi 9 (cepheus) (YangQi0408)",
     "title_zh": "Xiaomi Mi 9 (cepheus) (YangQi0408)"
@@ -260,6 +265,11 @@
     "title_zh": "Xiaomi 13 (Kerfand)"
   },
   {
+    "name": "fuxi-kkkpc",
+    "title": "Xiaomi 13 (kkkpc)",
+    "title_zh": "Xiaomi 13 (kkkpc)"
+  },
+  {
     "name": "fuxi-ljhhkx529",
     "title": "Xiaomi 13 (ljhhkx529)",
     "title_zh": "Xiaomi 13 (ljhhkx529)"
@@ -273,6 +283,11 @@
     "name": "fuxi-mouse233",
     "title": "Xiaomi 13 (mouse233)",
     "title_zh": "Xiaomi 13 (mouse233)"
+  },
+  {
+    "name": "fuxi-oddlylabs",
+    "title": "Xiaomi 13 (OddlyLabs)",
+    "title_zh": "Xiaomi 13 (OddlyLabs)"
   },
   {
     "name": "fuxi-sohytrs",
@@ -363,6 +378,11 @@
     "name": "houji-kizashi3",
     "title": "Xiaomi 14 houji SM8650 (Kizashi3)",
     "title_zh": "Xiaomi 14 houji SM8650 (Kizashi3)"
+  },
+  {
+    "name": "houji-sakayorilroha",
+    "title": "Xiaomi 14 houji SM8650 (SAKAYORILROHA)",
+    "title_zh": "Xiaomi 14 houji SM8650 (SAKAYORILROHA)"
   },
   {
     "name": "hummer",
@@ -615,6 +635,11 @@
     "title_zh": "一加 13T（oneplus13t）"
   },
   {
+    "name": "orangepi5",
+    "title": "Orange Pi 5 (Rockchip RK3588S)",
+    "title_zh": "Orange Pi 5 (Rockchip RK3588S)"
+  },
+  {
     "name": "pandora",
     "title": "Xiaomi 17 Pro (pandora)",
     "title_zh": "小米 17 Pro（pandora）"
@@ -653,6 +678,11 @@
     "name": "picasso",
     "title": "Redmi K30 5G (picasso)",
     "title_zh": "Redmi K30 5G（picasso）"
+  },
+  {
+    "name": "picasso-huydre",
+    "title": "Redmi K30 5G (huydre)",
+    "title_zh": "Redmi K30 5G (huydre)"
   },
   {
     "name": "picasso-minhtritt1996",
@@ -750,6 +780,11 @@
     "title_zh": "Realme 5 Pro (RMX1971)"
   },
   {
+    "name": "rmx3823",
+    "title": "realme GT5 240W (RMX3823), kalama, 24 GiB, 1240x2772 AMOLED",
+    "title_zh": "realme GT5 240W (RMX3823), kalama, 24 GiB, 1240x2772 AMOLED"
+  },
+  {
     "name": "ruyi",
     "title": "Xiaomi MIX Flip (ruyi)",
     "title_zh": "小米 MIX Flip（ruyi）"
@@ -800,6 +835,11 @@
     "title_zh": "Xiaomi Pad 6S Pro (jn7163)"
   },
   {
+    "name": "sheng-jsongmax",
+    "title": "Xiaomi Pad 6S Pro (jsongmax)",
+    "title_zh": "Xiaomi Pad 6S Pro (jsongmax)"
+  },
+  {
     "name": "sheng-liangkam",
     "title": "Xiaomi Pad 6S Pro (LiangKam)",
     "title_zh": "Xiaomi Pad 6S Pro (LiangKam)"
@@ -818,6 +858,21 @@
     "name": "sheng-thearchitectengineer",
     "title": "Xiaomi Pad 6S Pro (TheArchitectEngineer)",
     "title_zh": "Xiaomi Pad 6S Pro (TheArchitectEngineer)"
+  },
+  {
+    "name": "sheng-tkings4chan",
+    "title": "Xiaomi Pad 6S Pro (tkings4chan)",
+    "title_zh": "Xiaomi Pad 6S Pro (tkings4chan)"
+  },
+  {
+    "name": "sheng-v1-727",
+    "title": "Xiaomi Pad 6S Pro (v1-727)",
+    "title_zh": "Xiaomi Pad 6S Pro (v1-727)"
+  },
+  {
+    "name": "sheng-yeyingjun-codes",
+    "title": "Xiaomi Pad 6S Pro (yeyingjun-codes)",
+    "title_zh": "Xiaomi Pad 6S Pro (yeyingjun-codes)"
   },
   {
     "name": "sheng-yuyaukong",
@@ -930,6 +985,11 @@
     "title_zh": "Xiaomi Pad 7 (iOSNJBrepo)"
   },
   {
+    "name": "uke-tonghuaqwq",
+    "title": "Xiaomi Pad 7 (TongHuaQWQ)",
+    "title_zh": "Xiaomi Pad 7 (TongHuaQWQ)"
+  },
+  {
     "name": "uke-wuhaoran956-cyber",
     "title": "Xiaomi Pad 7 (wuhaoran956-cyber)",
     "title_zh": "Xiaomi Pad 7 (wuhaoran956-cyber)"
@@ -963,6 +1023,11 @@
     "name": "unixnu-build",
     "title": "unixnu-build",
     "title_zh": "unixnu-build"
+  },
+  {
+    "name": "venus",
+    "title": "Xiaomi Mi 11 M2011K2C: single-CPU platform bring-up",
+    "title_zh": "Xiaomi Mi 11 M2011K2C: single-CPU platform bring-up"
   },
   {
     "name": "vermeer",
@@ -1003,6 +1068,11 @@
     "name": "zeta",
     "title": "Microsoft Surface Duo 2 (zeta)",
     "title_zh": "Microsoft Surface Duo 2（zeta）"
+  },
+  {
+    "name": "zizhan",
+    "title": "Xiaomi MIX Fold 2 (zizhan, SM8475): UniXNU bring-up derived from Pong",
+    "title_zh": "Xiaomi MIX Fold 2 (zizhan, SM8475): UniXNU bring-up derived from Pong"
   },
   {
     "name": "zorn",
