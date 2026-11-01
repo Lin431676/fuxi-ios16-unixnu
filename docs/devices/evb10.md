@@ -1,0 +1,650 @@
+# Rockchip RK3588 EVB10 V10
+
+[Ken-u/UniXNU-evb10](https://github.com/Ken-u/UniXNU-evb10)
+
+<div v-pre>
+
+Rockchip RK3588 EVB10 V10 runs the iPadOS 17.7.11 userland on a source-built XNU, started from edk2-rk3588 firmware \(uefi-evb10\). Shared SoC support is in UniXNU-rk3588-common; this repository owns the memory layout, the eMMC root, the VOP2 display, touch, the Mali-G610 integration and the packaging. Every area in scope is device-verified on the board with a system built from these repositories \(docs/reproduce.md\): it boots to SpringBoard with the eMMC root and the Data volume mounted, the Mali composites the interface at about 50 frames per second while scrolling, and the panel and the touch screen were checked by hand and work normally. Not done: GPU and CPU frequency control, interrupt-driven GPU completion, network, audio and power management.
+
+Source record: [porting.toml](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/porting.toml), `8fa827d9f50efab222b73dbee8aa6613ff6dada7`.
+
+This page is generated from the device record.
+
+| Area | Status |
+| --- | --- |
+| [Configuration](#configuration) | `device-verified` |
+| [Firmware and boot](#firmware) | `device-verified` |
+| [CPU and interrupts](#cpu) | `device-verified` |
+| [Memory and DMA](#memory) | `device-verified` |
+| [Storage and root](#storage) | `device-verified` |
+| [Display](#display) | `device-verified` |
+| [Input](#input) | `device-verified` |
+| [GPU](#gpu) | `device-verified` |
+| [Network](#network) | `device-verified` |
+| [Audio](#audio) | `not-applicable` |
+| [Power](#power) | `not-applicable` |
+| [Image assembly](#packaging) | `device-verified` |
+| [Diagnostics](#diagnostics) | `device-verified` |
+
+## Configuration {#configuration}
+
+`device-verified`
+
+### Hardware and dependencies
+
+- ARM64 profile, rk3588 SoC source pinned in feeds.toml, iPadOS 17.7.11 build 21H461 profile, evb10\_defconfig and evb10\_display\_defconfig, submodules package/Mali and package/Rk3588Emmc.
+
+### Configuration
+
+- board.soc\_source = rk3588; board.os\_profile = ipados-17.7.11-21H461; schema\_version = 2.
+- kernel.config\_fragments = arch common, soc rk3588, os ipados; the defconfig applies last and switches off what the OS profile enables for other hardware \(NATIVE\_ADRENO, SOURCE\_MOCKFS\).
+- kernel.patch\_series = arch, soc, os, device in that order.
+- payload.kernel\_args carries the frame-rate group as defaults: zero-copy scanout with the GPU job as the fence \(evb10-vop-direct=1, evb10-vop-fence=1\), the GPU at 750 MHz \(mali-pll=1, mali-div=1\), the device's YCbCr filter \(mali-ycbcr-filter=device\), asynchronous surface flush \(mali-aflush=1\), cpumask=31, mali-epri=50 and sched-slowcpus=240; the comment above the list says what each one does.
+
+### Procedure
+
+- From the UniXNU checkout run ./unixnu defconfig evb10\_defconfig -D ../UniXNU-evb10, then ./unixnu fetch and ./unixnu status --json with the same -D.
+- For a local SoC checkout copy local.toml.example to local.toml.
+- Run scripts/build-evb10-kernel.sh for the two-pass kernel build.
+
+### Development findings
+
+- The \[adt.defaults.u32\] table of board.toml must carry sleep-disabled = 1 and vmm-present = 1; the OS profile only supplies kern.maxvnodes. vmm-present backs kern.hv\_vmm\_present: without it watchdogd traps with SIGTRAP three times and the kernel panics when the third instance exits \(seen in a rebuild from a clean tree, fixed in the clean-directory rerun\).
+- Arrays replace inherited values, so board.toml lists every archive, fragment and trust-cache digest it needs.
+- The display archive is made from the kernel of an earlier display-less pass, which is why two defconfigs exist and why the build script runs them in order.
+- A device script named like a UniXNU script shadows it in the build tree; the board driver builder is therefore named build-evb10-drivers.py and does not replace build-arm-driver.py.
+- A boot with the committed defaults and nothing else but the scripted swipes and the command-buffer timeline \(run v1\) held the GPU at 750 MHz, the Cortex-A76 cores at 2.23 GHz and 52.6 frames per second while the finger was down \(swipes 3 to 11\), and ended its 235 s capture without a panic or a stalled GPU group.
+- The evidence/ directory holds one curated excerpt per verified checkpoint, named &lt;topic&gt;-&lt;date&gt;.txt. Excerpts of kernel runs name the run command and tag; the Wi-Fi identity excerpt \(evidence/wifi-sdio-id-20261030.txt\) comes from U-Boot with no kernel running, so it names the probe script and the uefi-evb10 revision that holds it.
+- libEvb10Wifi.a \(package/Evb10Wifi, built by a board.toml step like the touch archive\) is linked by configs/evb10\_display\_defconfig only, because the display probe is its only caller; evb10-wifi=1 is a per-run argument, not part of the 884-byte defaults.
+- board.toml runs scripts/build-wifi-firmware.py before build-evb10-drivers.py Evb10Wifi: it turns the AP6398S firmware and nvram of .cache/firmware \(scripts/extract-files.py --section "AP6398S Wi-Fi"\) into the git-ignored package/Evb10Wifi/wifi\_fw.inc; without the files the driver embeds nothing and level 2 of evb10-wifi stops after the bus switch.
+- board.toml builds SoftwareAES and the Wi-Fi network side \(build-evb10-wifinet.py\), \[components\] include lists SoftwareAES, and configs/evb10\_display\_defconfig force-loads libEvb10WifiNet.a next to libEvb10Wifi.a; the SoC repository's rk3588.config keeps CONFIG\_XNU\_NATIVE\_AES=y \(the earlier comment claiming the RK3588 has no such device described the Qualcomm crypto engine, not this software implementation\).
+
+### Completion criteria
+
+- Every source pin resolves, ./unixnu status lists the intended patch order, and both defconfigs materialise.
+
+### Current limits
+
+- The format 2 configuration has been materialised and checked with status and tree; a full kernel build with it is recorded under Image assembly.
+
+### Next action
+
+- Pin the Mali and Rk3588Emmc submodules to released commits when they change.
+
+### Evidence
+
+- `source`: [Implementation and configuration described in this section](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/board.toml)
+- `device`: [Boot with the committed default arguments \(run v1\): GPU 750 MHz by the cycle counter, Cortex-A76 cores at 2.23 GHz, 504 heavy command buffers took 14.9 ms \(median\) and 18.9 ms \(90th percentile\) from commit to completion, 52.6 frames per second with the finger down in the scripted swipes 3 to 11, no panic and no stalled GPU group in a 235 s capture](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1; python3 tools/xnu-probe/cb_table.py v1 --latency; python3 tools/xnu-probe/frame_phases.py v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## Firmware and boot {#firmware}
+
+`device-verified`
+
+### Hardware and dependencies
+
+- edk2-rk3588 firmware built by uefi-evb10 \(SPI NOR image\), TF-A at EL3 with PSCI over SMC, UEFI GOP frame buffer and the Mali CSF firmware listed in proprietary-files.txt.
+
+### Configuration
+
+- board.toml has no \[firmware\] section: the unixnu firmware step builds Mu-Silicium, and this board boots edk2-rk3588 built by uefi-evb10.
+- payload.loader = firmware: DarwinBoot is inside the firmware volume.
+- proprietary-files.txt pins mali\_csffw.bin by SHA-256; scripts/extract-files.py places it in .cache/firmware.
+
+### Procedure
+
+- Build the firmware in uefi-evb10 \(build.sh\) and flash or boot it as that repository describes.
+- Run scripts/extract-files.py SOURCE, then the kernel step; scripts/build-mali-firmware.py writes package/Mali/mali\_csffw.inc.
+
+### Development findings
+
+- The firmware hands the kernel EL1 with the MMU off and PSCI on SMC; secondary cores started by CPU\_ON arrive at EL2 and the SoC patch drops them to EL1.
+- The firmware leaves the eMMC in HS400 and UART2 at 1.5 Mbaud; the drivers rely on both.
+- proprietary-files.txt also lists the AP6398S Wi-Fi firmware and nvram from the Rockchip Android vendor tree as optional entries \(fw\_bcm4359c0\_ag.bin for the BCM4359 C0, revision 9, read over SDIO\); no driver loads them yet. The fw\_bcm4359c51a2\_ag.bin of that directory is a 4362a2 build and does not fit this module.
+
+### Completion criteria
+
+- Firmware enters DarwinBoot, publishes the GOP frame buffer and keeps the memory reservations of the board.
+
+### Current limits
+
+- Firmware and its boot flow are documented in uefi-evb10; this repository only pins the inputs.
+
+### Next action
+
+- Record the firmware commit next to each image verification.
+
+### Evidence
+
+- `source`: [Firmware inputs and their digests](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/proprietary-files.txt)
+- `device`: [UEFI built from uefi-evb10 94ec4bd with the GPU rail at 0.75 V started from U-Boot's fastboot, the UniXNU menu booted the xnu entry, DarwinBoot published the 640x480 GOP frame buffer and kept the reserved regions of the device tree, boot services ended at 20.8 s and the kernel printed 'kprintf initialized' 0.4 s later \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1</code>. Revision: `94ec4bd00d4d755623ce6cedd84172cbcd238dbd`.
+
+## CPU and interrupts {#cpu}
+
+`device-verified`
+
+Components: `ArmCpu`, `ArmDTPlatform`.
+
+### Hardware and dependencies
+
+- Four Cortex-A55 and four Cortex-A76 at affinities 0x000 to 0x700, GICv3 at 0xfe600000 with redistributors at 0xfe680000 \(128 KiB stride\), 24 MHz architected timer, PSCI over SMC.
+
+### Configuration
+
+- The CPU, GIC and PSCI nodes come from the SoC dtsi \(rk3588-common dts/rk3588.dtsi\); the board DTS enables nothing extra.
+- Kernel arguments sheng-smp=1, armcpu-self-ipi=1 and armcpu-mmio-sgi=0 select the secondary-core and IPI paths.
+- cpumask=31 starts logical cores 0 to 4 only: the four Cortex-A76 cores, which the SoC device tree lists first, and the boot core, a Cortex-A55. sched-slowcpus=240 marks logical cores 4 to 7 \(the Cortex-A55 cores\) as slow for the scheduler.
+
+### Procedure
+
+- Compile dts/evb10.dts through ./unixnu tree and inspect /cpus, /psci and /arm-io/intc in the generated device tree.
+- Boot and read the per-core entry lines on the serial console.
+
+### Development findings
+
+- Inline assembly in this target goes through the Darwin assembler, where ';' starts a comment: "dsb ishst; msr icc\_sgi1r\_el1, %0; isb" assembled to a lone dsb. Earlier conclusions that the GIC ignores ICC\_SGI1R, that the A55 CNTFRQ is zero and that counters differ per core all came from this mistake and were withdrawn. The SoC repository carries the ArmCpu fix; scripts/build-evb10-kernel.sh refuses new inline assembly with ';'.
+- With the fix all eight cores run and inter-processor interrupts go through ICC\_SGI1R\_EL1.
+- XNU takes the lowest-numbered idle core and the device tree order numbers the cores, so the SoC device tree lists the Cortex-A76 cores first \(logical 0 to 3\) and the boot core, the fifth node, is found by matching its MPIDR with reg. The render server's encoding thread replays a command buffer in 4 ms on a Cortex-A76 and 11 to 14 ms on a Cortex-A55; sched-slowcpus keeps user-interface threads off an idle slow core while a fast one is free or can be preempted \(rk3588-slow-cores.patch, SoC repository\).
+- The firmware's regulator table for the Cortex-A76 clusters was compiled as zeros \(the DSC used a macro that exists only in C\), so the clusters were clocked up without more voltage and calibrated at 1.78 GHz. With the table fixed in uefi-evb10 the A76 cores calibrate at 2.23 GHz \(the A55 at 1.86 GHz\); a Cortex-A76 integer loop takes 20 % less time, the 4 ms replay stays the same because it waits for memory.
+
+### Completion criteria
+
+- Every enabled core reaches its entry checkpoint and receives timer and inter-processor interrupts.
+
+### Current limits
+
+- CPU frequency is not managed: cores run at the clock the firmware left \(Cortex-A76 2.23 GHz, although the firmware asks for 2.4 GHz and the gap was not investigated; Cortex-A55 1.86 GHz\). No cluster-type properties are set, so the scheduler sees one cluster type, and the slow-core mask is a boot argument. cpumask=31 leaves three Cortex-A55 cores off.
+
+### Next action
+
+- Add CPU frequency control and decide whether to describe the A55 and A76 clusters to the scheduler.
+
+### Evidence
+
+- `source`: [Board device tree on top of the shared SoC description](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/dts/evb10.dts)
+- `device`: [The four Cortex-A76 cores reported running at 2230, 2230, 2223 and 2223 MHz with cpumask=31 and sched-slowcpus=240 on the command line; the render server's encoding thread ran on the Cortex-A55 core for 6 of the 504 heavy command buffers and on an A76 core for the other 498, with no panic in 235 s \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1; python3 tools/xnu-probe/cb_table.py v1 --latency</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## Memory and DMA {#memory}
+
+`device-verified`
+
+### Hardware and dependencies
+
+- DRAM bank 0x1\_00000000 with size 0x1\_00000000 in the firmware memory map, 2 GiB owned window for the kernel, eMMC controller with 32-bit DMA.
+
+### Configuration
+
+- dts/evb10.dts declares the memory node; payload.dram\_size must equal it.
+- payload.adt.owned\_memory\_size = 0x80000000: DarwinBoot allocates this contiguous window from the low bank.
+
+### Procedure
+
+- Compare the firmware memory map, dts/evb10.dts and the owned window reported by DarwinBoot.
+- Check DMA buffers of the eMMC driver against the 4 GiB address limit.
+
+### Development findings
+
+- The 4 GiB bank above 4 GiB is the one large region without TF-A, OP-TEE, firmware or Rockchip carve-outs.
+- A 256 MiB window left too little memory for the iPadOS userland; 2 GiB fits the firmware's low bank, 3 GiB was refused with Out of Resources. All pages sit below 4 GiB, where the eMMC DMA reaches.
+- No IOMMU is used for the eMMC controller; the driver allocates a bounce window below 4 GiB.
+- dts/evb10.dts also carries the wlan node that makes the userland start wifid \(a launchd job limited to devices with such a node in the Apple device tree\); it has no registers and no interrupts and is described in the network area.
+
+### Completion criteria
+
+- All handoff regions are accounted for and every DMA engine works inside its allocated range.
+
+### Current limits
+
+- Memory above the 2 GiB window is unused.
+
+### Next action
+
+- Test a larger window by placing the kernel window above 4 GiB.
+
+### Evidence
+
+- `source`: [Memory node and handoff window](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/dts/evb10.dts)
+- `device`: [The hand-off kept cma, drm-logo, vendor-storage and ramoops reserved and gave the kernel a window of 0x80000000 bytes; the eMMC reads \(111 block requests, 0 failures\), the VOP2 scanout behind its IOMMU \(paging on\) and the Mali jobs ran inside it for 235 s without a fault or a panic \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## Storage and root {#storage}
+
+`device-verified`
+
+Components: `AppleKeyStoreState`.
+
+### Hardware and dependencies
+
+- DesignWare MSHC at 0xfe2e0000, 8-bit eMMC, GPT with userdata at LBA 8459264 to 122142655 \(512-byte blocks\), SHNGROOT manifest image written by unixnu build userdata.
+
+### Configuration
+
+- userdata.first\_lba, last\_lba and windows \(OS, SystemOS\) describe the root image.
+- Kernel arguments: emmc=4, emmc-root-trust=1, emmc-systemos-union=1, emmc-data-mount=1, emmc-data-size=2048, emmc-data-persist=1.
+- payload.adt.root\_match\_volume\_uuid names the OS volume; packed\_data\_ramdisk = false.
+
+### Procedure
+
+- Build with build-evb10-drivers.py Rk3588Emmc followed by bind-emmc-storage.py; regenerate scripts/data/evb10-storage-interface-audit.json with audit-evb10-storage.py when the kernelcache pin changes.
+- scripts/peek-root-image.py reads the manifest of a userdata image without a board.
+
+### Development findings
+
+- The driver subclasses the original IOBlockStorageDevice, so its archive is made by binding the object to the original code at audited addresses.
+- Only the last 2049 MiB of userdata, the Data window, is ever written: the first start formats it and the kernel copies /private/var once, after which restarts mount it. Writes showed zero failures in the observed runs.
+- A 256 MiB Data volume ran out of space \(ENOSPC\) and stalled SpringBoard; 512 MiB was enough to reach the lock screen, 2048 MiB is the configured size. vnode jetsam killed daemons until /defaults/kern.maxvnodes was set to 66560, which the OS profile now provides.
+- The tools directory is split by owner: the thread-sample include belongs to the diagnostics area, while the userland-mounts include keeps, next to the mounts, the periodic process table and the screenshot over the serial line.
+- The Data window is a persistent volume: the kernel keeps the tree and preferences of earlier boots \(evb10: Data: persistent volume, seeded by an earlier boot\) and, because a run ends by resetting the board, mounts the container after an unclean unmount by reloading its newest checkpoint.
+
+### Completion criteria
+
+- The root volume mounts read-only from the OS window and the Data volume mounts read-write across restarts.
+
+### Current limits
+
+- Only eMMC is supported; PCIe NVMe is not used. Every run ends by resetting the board, so the Data container has always been mounted after an unclean unmount; a mount after an orderly shutdown was not exercised.
+
+### Next action
+
+- Repeat the persistence check after a clean unmount, which no run has exercised.
+
+### Evidence
+
+- `source`: [Binding of the eMMC block device to the original storage class](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/scripts/bind-emmc-storage.py)
+- `device`: [The SystemOS window is published read-only \(111 block requests, 0 failures\), the root volume of the OS window is accepted read-only, the 2 GiB Data window is published writable and /private/var mounts on it as a persistent volume. Across 56 boots of 2026-10-30, each run ending by a board reset, the transaction id of the Data container rose from 10018 to 16586 and 47 of the boots recovered it after an unclean unmount \(run v1 and the table in the log\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## Display {#display}
+
+`device-verified`
+
+Components: `GopFramebuffer`.
+
+### Hardware and dependencies
+
+- VOP2 with the Esmart3 window on the DSI panel, 1080x1920; UEFI GOP frame buffer; original IOMobileFramebufferLegacy bound to NativeLegacyDisplay.
+
+### Configuration
+
+- Kernel arguments evb10-vop=2, evb10-vop-es2=1, evb10-fb-w=1072, evb10-fb-h=1904, offline-legacy-\* and sheng-vsync=60.
+- evb10\_display\_defconfig links the display archive and the link stubs.
+
+### Procedure
+
+- Build both passes with scripts/build-evb10-kernel.sh and boot with a monitor or panel attached.
+
+### Development findings
+
+- The firmware assigns Esmart3 to VP2; writing back the layer-mixer policy of U-Boot makes the window take effect.
+- Underruns \(POST\_BUF\_EMPTY\) on the panel path came from the firmware's HDMI0 window \(Esmart2\) fetching at the same time; disabling it with evb10-vop-es2=1 gave zero underruns.
+- A frame size of exactly 1080x1920 makes backboardd render the 1242x2208 geometry of other devices and ask for scaling, which the full-frame swap validation rejects; 1072x1904 avoids it.
+- Tearing in scanout was removed by waiting for the GPU jobs of a frame before the page flip.
+- The kernel prints the gaps of every moving window of frames \(evb10: display gaps\), on the clock of the Metal plug-in's command-buffer timeline, so the hitches of a swipe can be matched with the command buffers. A screenshot over the serial line \(evb10-shot-img\) reads the live frame buffer row by row for several seconds, so moving content tears in it; compare static frames only.
+- The late probe of package/LegacyDisplayProbe.cpp also calls evb10\_wifi\_start \(package/Evb10Wifi\), next to the touch and Mali starts; it does nothing unless evb10-wifi=1.
+
+### Completion criteria
+
+- The panel shows the lock screen without flicker or tearing.
+
+### Current limits
+
+- Frame rate while scrolling is limited by how fast a heavy frame is encoded and drawn against its deadline \(see GPU\). The panel timing is the firmware's.
+
+### Next action
+
+- Shorten the encoding of heavy frames \(see GPU\), take screenshots from a snapshot, and move presentation to vsync interrupts.
+
+### Evidence
+
+- `source`: [VOP2 scanout presenter](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/package/Evb10Display/NativeLegacyDisplay.cpp)
+- `device`: [Checked by hand on the board \(reported 2026-10-30\): the panel works normally](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; tools/xnu-probe/run-kernel.sh TAG, then look at the panel</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+- `device`: [The kernel frame buffer \(1072x1904\) is scanned out by VOP2 behind its IOMMU and the display gap log shows 16.6 ms between frames: 52.6 frames per second with the finger down in the scripted swipes 3 to 11 \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1; python3 tools/xnu-probe/frame_phases.py v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## Input {#input}
+
+`device-verified`
+
+### Hardware and dependencies
+
+- Goodix GT1158 on I2C5, polled; coordinate grid 720x1280 on a 1080x1920 panel.
+
+### Configuration
+
+- Kernel arguments evb10-touch=1, evb10-touch-xmax=720, evb10-touch-ymax=1280, evb10-hid=1, evb10-hid-input=1, sheng-touch-hid=1.
+- evb10-touch-khz sets the I2C5 clock \(100 to 400, default 100\). evb10-touch-demo=SECS plays scripted gestures without a finger from SECS seconds after the first poll \(a swipe up, then left and right swipes of 0.8 s every 7 s\), which is how the frame rate is measured without a person.
+
+### Procedure
+
+- Boot and watch the evb10: touch lines on the console; touch the panel and check the pointer in SpringBoard.
+
+### Development findings
+
+- The controller reports a configured 800x480 but delivers X 9..696 and Y 10..1270: the real grid is 720x1280.
+- The input device is one HID device on the IOHIDResource; the original IOHIDEventDriver attaches to it and feeds backboardd.
+- The poll runs as a thread call at priority 93 about every 11.5 ms and the master busy-waits: at 100 kHz one tick costs 535 us on average \(the slowest tick of a window of 1000 was 1.2 to 6.4 ms when it was preempted\), about 4.6 % of a fast core; at 400 kHz it costs 150 us \(191 us at most\). The kernel prints the average and the maximum every 1000 ticks.
+- At 400 kHz the bus scan still sees 0x14 and 0x5d, reads Goodix product id 1158 and ten touch points, and counts no bus errors.
+- evb10-touch-script=SECS plays taps and swipes from a script compiled in from the git-ignored package/Evb10Touch/touch\_script.inc \(scripts/gen-wifi-touch-script.py writes it from the join file\), to drive screens without a person; with evb10-ps and evb10-shot-img the serial log carries screenshots. On the board the lock screen needs two swipes up \(the first is always lost\); taps then open Settings, the Wi-Fi pane, a network's row, the password sheet and its keyboard, so the Settings Wi-Fi flow was checked this way \(docs/network.md, checkpoint 7\). The taps that earlier seemed to miss were Settings failing to start \(see GPU\). One launch in nine of the clean runs \(t45\) showed no Preferences process after the Dock tap and was not explained; a row that disappears from a list because the signal is weak makes a fixed tap land on the next row.
+- The touch tick line is followed by a line from the event driver \(package/Evb10Hid\): wrapper installed, contacts begun, contacts at an edge, skipped events and reports with two or more fingers.
+
+### Completion criteria
+
+- Touch coordinates map to the panel and SpringBoard reacts.
+
+### Current limits
+
+- No keyboard, buttons or pen; the controller is polled every 10 ms. The 400 kHz setting was checked on the bus only: a finger on the panel at that speed was not tried.
+
+### Next action
+
+- Use the controller interrupt instead of polling.
+
+### Evidence
+
+- `source`: [I2C master and touch controller driver](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/package/Evb10Touch/Evb10Touch.cpp)
+- `device`: [With evb10-touch-khz=400 the poll tick took 150 us on average and 191 us at most over 1000 ticks, the I2C scan found 0x14 and 0x5d, the controller reported product id 1158, and there were no bus errors \(run tk4\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/touch-400khz-tk4-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; EXTRA_KERNEL_ARGS="evb10-touch-khz=400" tools/xnu-probe/run-kernel.sh tk4</code>. Revision: `11d08ffb699a5a3e8140b27d0dc943ff5b129986`.
+- `device`: [Checked by hand on the board \(reported 2026-10-30\): the touch screen works normally](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; tools/xnu-probe/run-kernel.sh TAG, then touch the screen</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+- `device`: [The Goodix GT1158 answered at 0x14 on I2C5 at 100 kHz \(product id 1158, axes 720x1280 mapped to 1080x1920\), a poll tick took 536 us on average, and 352 HID reports by t+130 s drove the scripted swipes on the home screen \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## GPU {#gpu}
+
+`device-verified`
+
+### Hardware and dependencies
+
+- Mali-G610 \(Valhall CSF\) at 0xfb000000, CSF firmware from proprietary-files.txt, MaliMetal user-space stack \(PanVK, metal2vulkan, Metal plug-in\).
+
+### Configuration
+
+- Kernel arguments mali=8 and mali-metal=1; evb10-gpu-addon=1 makes the payload tool carry the Metal plug-in.
+- mali-pll and mali-div choose the clock source and the divider minus one \(default mali-pll=1 mali-div=1: CPLL 1500 MHz over two, 750 MHz\); mali-npll=MHz \(400 to 1100\) retunes NPLL for source 3; mali-epri sets the priority of the encoding thread; mali-aflush=1 flushes surfaces asynchronously. The UEFI build option GPU\_RAIL\_UV sets the GPU rail in microvolts \(default 750000\).
+- package/Mali is a submodule; scripts/build-mali-firmware.py generates the firmware include.
+
+### Procedure
+
+- Provide the firmware, build the kernel, then build the user-space stack from MaliMetal and the add-on it describes.
+
+### Development findings
+
+- The stack composites the iPadOS lock screen on the Mali: backboardd, AGXAccelerator, NativeMaliMetal, metal2vulkan, PanVK and the Mali driver.
+- PanVK counts a colour attachment with write mask 0 as written; a Mesa patch in MaliMetal fixes the black rectangle behind the lock screen clock.
+- Scrolling the home screen with the frame-rate arguments, now the defaults of board.toml, gets about 50 frames per second in the steady state on the board, 58 at best; the scripted swipes 3 to 11 of run v1 gave 52.6 frames per second with the finger down and 57.5 at best.
+- The heavy render passes scale with the GPU clock \(84.9, 28.4 and 22.5 ms at 198, 594 and 750 MHz\). The wallpaper pass was metal2vulkan's bit-exact YCbCr filter \(about 570 instructions a sample\), not memory: the device's own linear filter takes it from 22.5 to 7.9 ms.
+- PanVK let a draw kill the fragments of earlier draws only if it wrote every bound colour attachment, which CoreAnimation's passes never do \(they bind a write-masked memoryless second one\). A Mesa patch in MaliMetal lets a draw kill when its write set covers the earlier draw's: a matrix of nine write-set pairs on the board shows the pixels only the earlier draw writes never differ, and the median command-buffer GPU time falls from 14.1 to 9.7 ms.
+- What is left of a heavy frame is on the CPU: the render server's encoding thread replays the command buffer \(4 ms on a Cortex-A76, 11 ms on an A55\) and submits it \(1.4 ms\) before the GPU starts, 0.7 ms after the submit returns.
+- A heavy command buffer \(50 draws or more\) has to go from commit to completion in about 19.3 ms to be shown on the second vsync after it. At 750 MHz the 504 of run v1 took 14.9 ms \(median\) and 18.9 ms \(90th percentile\) and 8.7 % were over 19.3 ms; at 1 GHz \(run v2\) 12.7 and 15.6 ms and 2.5 % \(1.6 % in an earlier run\); the median GPU time of a heavy command buffer is 10.1 ms at 750 MHz and 7.9 ms at 1 GHz.
+- The encoding thread landed on a Cortex-A55 for 8 % of the heavy command buffers \(replay 11 to 14 ms instead of 4 ms\), the main source of late frames. Listing the Cortex-A76 cores first, raising the thread's priority to 50 \(mali-epri\) and keeping user-interface threads off idle slow cores \(sched-slowcpus\) together bring that to 0.5 to 1.8 %; neither of the last two helps alone.
+- mali-npll=1000 retunes NPLL before the GPU is switched onto it and needs the GPU rail at 0.85 V \(vendor operating points: 0.75 V up to 800 MHz, 0.85 V for 1 GHz\), so the firmware is built with GPU\_RAIL\_UV=850000; 750 MHz at 0.75 V is the default. A 12-minute capture at 1 GHz \(81 scripted swipes, 3553 heavy command buffers\) ended without a panic or a stalled group and with vkpipe failed=0 throughout.
+- From the start of a swipe to the first command buffer takes about 60 ms for a left swipe and 150 to 170 ms for a right swipe at every GPU clock. The CPU times of the processes suggest the Today View widgets are rendered on each right swipe \(WidgetRenderer\_Default used 0.17 s of CPU per 13 s of swiping against 0.003 s idle\), but no thread stack was taken to confirm it.
+- A host buffer \(BO\_CREATE\_HOST\) over a file's pages, such as an application's mapped assets that the render server shares, is copied instead of pinned: the pin holds the file object's activity count, and unmapping the file's last mapping waits for it in the thread that retires the GPU work holding the pin, so the render server stopped at the first application launch \(run t17\). The Mali driver's sandbox grant and the plug-in's process list also name iconservicesagent and Preferences: without a Metal device the icon agent of Settings falls back to OpenGL ES, which this device has none of, and crashes in CI::GLContext::init \(run t19\). A build without these two changes starts Settings and leaves its main thread waiting in CASGetDisplays for the render server \(runs t39 to t41\); with them Settings is on the screen within 4 seconds of the tap \(runs t35 to t38, t42 to t44\).
+
+### Completion criteria
+
+- The lock screen and its animations render on the Mali at a steady frame rate.
+
+### Current limits
+
+- No DVFS: the GPU clock is fixed \(750 MHz by default at the 0.75 V the firmware sets; 1 GHz with a firmware built for 0.85 V, not tried on the 0.75 V rail\); no interrupt-driven completion \(waits poll\), at most eight groups. At 750 MHz 8.7 % of the heavy command buffers miss their 19.3 ms deadline \(1.6 to 2.5 % at 1 GHz\) and a right swipe starts about 100 ms later than a left one. The panel was checked by hand and works normally \(see Display\).
+
+### Next action
+
+- Submit a command buffer while it is still being replayed, find what SpringBoard does in the 100 ms after a right swipe starts, and move completion to the GPU interrupts.
+
+### Evidence
+
+- `source`: [Mali driver source is the package/Mali submodule](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/.gitmodules)
+- `device`: [The 1 GHz steps of docs/reproduce.md with a firmware built from uefi-evb10 94ec4bd with GPU\_RAIL\_UV=850000 \(run v2\): the console shows npll 1000000 kHz locked, the cycle counter reads 1000 MHz, 511 heavy command buffers took 12.7 ms \(median\) and 15.6 ms \(90th percentile\), 2.5 % were over 19.3 ms, 53.8 frames per second with the finger down in swipes 3 to 11, no panic and no stalled GPU group in 235 s](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/gpu-1ghz-v2-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; env -i HOME=$HOME USER=$USER PATH=/usr/local/bin:/usr/bin:/bin GPU_RAIL_UV=850000 ./build.sh &amp;&amp; tools/stub/build.sh &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="mali-pll=3 mali-div=0 mali-npll=1000 evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v2; python3 tools/xnu-probe/cb_table.py v2 --latency</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+- `device`: [Boot with the committed default arguments: the Mali at 750 MHz \(cycle counter\) composited the interface for backboardd and SpringBoard, vkpipe n=76 failed=0, 504 heavy command buffers took 14.9 ms \(median\) and 18.9 ms \(90th percentile\) from commit to completion, 52.6 frames per second with the finger down in the scripted swipes 3 to 11, no panic in 235 s \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1; python3 tools/xnu-probe/cb_table.py v1 --latency; python3 tools/xnu-probe/frame_phases.py v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## Network {#network}
+
+`device-verified`
+
+### Hardware and dependencies
+
+- AP6398S module \(Broadcom BCM4359 C0, Wi-Fi on SDIO 3.0 and Bluetooth on UART9\) behind the DW-MSHC at 0xfe2d0000 \(SPI 204\); WL\_REG\_ON = GPIO0\_C4, 32.768 kHz low-power clock from the HYM8563 RTC CLKOUT, WL\_HOST\_WAKE = GPIO0\_B2 \(stock device tree\).
+- Firmware fw\_bcm4359c0\_ag.bin and nvram\_ap6398s.txt from the Rockchip Android vendor tree, listed as optional entries in proprietary-files.txt; the network to join \(SSID, passphrase\) in the local, git-ignored .cache/firmware/join.txt.
+- The catalog has no SDIO or Broadcom component \(Ath12kWifi is Qualcomm PCIe\); the protocol follows Linux brcmfmac; package/Evb10Wifi/nw\_abi.h is the interface of Ath12kWifi and WifiNet.cpp is adapted from UniXNU-sheng.
+
+### Configuration
+
+- package/Evb10Wifi is built by build-evb10-drivers.py Evb10Wifi and Evb10WifiNet \(steps of board.toml; build-evb10-wifinet.py removes the static initializer from the WifiNet.cpp object and archives it\), linked by configs/evb10\_display\_defconfig only, and started by the display probe when the boot argument evb10-wifi=N is given \(not a default\): 1 identify, 2 download and start the firmware, 3 talk to it and scan, 4 join the network of the join file and run a self-test \(DHCP, ARP, ping\), 5 join and serve the interface en0 to the OS without the self-test. The images and the join file are embedded by build-wifi-firmware.py \(output git-ignored\).
+- The bus: sdiom0 pins on function 2 through GPIO2A\_IOMUX\_SEL\_H / GPIO2B\_IOMUX\_SEL\_L in BUS\_IOC, WL\_REG\_ON high, identification at 400 kHz 1-bit from xin24m, then CCCR 0x07 = 0x82 \(4-bit\), CTYPE 1, CLKSEL\_CON\(172\) = 0x5c \(GPLL / 24, about 24.75 MHz at the card\), function 1 block size 64, function 2 enabled \(IOEx = 6\) after the firmware starts.
+- The network side needs the software AES of the board configuration \(CONFIG\_XNU\_NATIVE\_AES=y in the SoC repository's rk3588.config and the SoftwareAES component\) so that IOKit goes quiet; see Image assembly.
+- evb10-wifi-join=0 \(with 4 or 5\) does not join the join file's network at boot, so the join comes from the OS \(Settings\); 2 is the same and the scans list only the join file's network, which puts it in a fixed row of the Settings list for scripted taps.
+
+### Procedure
+
+- Fill UniXNU-evb10/.cache/firmware: scripts/extract-files.py &lt;vendor dir&gt; --section "AP6398S Wi-Fi" for the images, and a join.txt with the SSID on the first line and the passphrase on the second.
+- Build with scripts/build-evb10-kernel.sh, then cd uefi-evb10 &amp;&amp; EXTRA\_KERNEL\_ARGS="evb10-wifi=5" CAPTURE\_SECS=200 EARLY\_STOP=0 tools/xnu-probe/run-kernel.sh TAG and read the evb10: wifi and wifi-net lines of runs/TAG.kernel.log \(level 3 lists access points, level 4 runs the self-test, level 5 lets the userland use en0\).
+- U-Boot: reset the board \(uefi-evb10 tools/board/hw-reset.sh reset\) and run uefi-evb10 tools/board/sdio-probe.py --enter for the identity checkpoint.
+- Settings: cd UniXNU-evb10 &amp;&amp; scripts/gen-wifi-touch-script.py forget \(or join, info, rejoin\), rebuild the kernel, then cd uefi-evb10 &amp;&amp; EXTRA\_KERNEL\_ARGS="evb10-wifi=5 evb10-wifi-join=2 evb10-ps=12 evb10-touch-script=99 evb10-shot-img=1 evb10-shot-scale=2" CAPTURE\_SECS=420 tools/xnu-probe/run-kernel.sh TAG and python3 tools/xnu-probe/shot2png.py runs/TAG.kernel.log OUTDIR \(the passphrase of the join file can show in a screenshot if a tap misses its row: keep the images out of commits\).
+
+### Development findings
+
+- The module answers: CMD5 returns OCR 0xb0ffff00 \(3 IO functions\), the CIS manufacturer ID is 02d0:4359 and ChipCommon CHIPID is 0x17294359, chip 0x4359 revision 9 \(C0\), with the ALP clock available after the request \(CHIPCLKCSR 0x48\).
+- The IOMUX registers of GPIO2 are in BUS\_IOC \(0xfd5f8044 and 0xfd5f8048\). The offsets of the rk3588\_ds\_regs and rk3588\_p\_regs tables of pinctrl-rockchip.c are drive strength and pull in other IOC blocks; written as function selects they leave the SDIO CLK pad low and the card never answers CMD5.
+- The HYM8563 CLKOUT \(the module's low-power clock\) is enabled after reset, so U-Boot and the kernel need no setup for it.
+- CMD53 in byte mode with a count above the function 1 block size answers R5 OUT\_OF\_RANGE and a data timeout and leaves the host FIFO full; set the block size \(64\), use block mode for 64 bytes and up and reset the FIFO before each transfer.
+- The firmware of the C0 module starts with the reset values of SDIO\_CON0/1 at about 25 MHz in 4-bit mode: after the CR4 release the HT clock is available in 34 ms and function 2 ready in 232 ms, with the images written in 90 ms and read back identical.
+- The firmware \(wl0 9.87.51.11.102\) answers SDPCM/BCDC on function 2 with bus:txglom 0 and mpc 0; cur\_etheraddr is the module's OTP address, not the default in the nvram. An escan lists 35 to 43 networks of both bands in 1.5 to 1.7 s.
+- Without WLC\_SET\_INFRA 1 / WLC\_SET\_AP 0 before WLC\_UP a join makes an ad-hoc network \(a link-up event with a random BSSID and no key exchange\). With them, bsscfg:wpa\_auth 0x80, wsec 4, sup\_wpa 1 and WLC\_SET\_WSEC\_PMK, the firmware's supplicant keys the link \(event 46 status 6\) 2.1 s after the join command and the driver's own DHCP, ARP and ping through the BCDC data path work.
+- SDPCM transmit is credit based; under a bulk download the chip's credits arrive slowly and a 32-frame queue without waiting dropped 12006 of 38850 frames. The queue holds 128 frames and if\_output waits up to 40 ms for room: 19 of 2315 frames were given up in a run that received 8 MB; the 105 MB case was not repeated.
+- en0 is an ifnet made with IFNET\_INIT\_LEGACY \| IFNET\_INIT\_NX\_NOAUTO and bpf\_attach; IONetworkStack, IO80211Controller and IO80211Interface are classes registered late \(static initializer run between OSMetaClass::preModLoad and postModLoad\). With it the userland's DHCP client, DNS and TCP work: one run received 105 MB in 240 s \(best 10 s interval 34 Mbit/s\).
+- The userland's interface namer and wireless daemon wait for IOKit to go quiet. The original AppleImage4 matches on /defaults and its start waits without a timeout for IOAESAccelerator, which nothing provided, so the registry never went quiet \(the first lease came at 330 s\); with SoftwareAES IOKit is quiet 26 s into the boot log.
+- With a network the system downloads assets in the background and the 2 GiB Data window \(about 250 MB free after a normal boot\) fills within minutes \(ENOSPC for those daemons; the next boot had its free space back\).
+- wifid is a launchd job limited to devices whose device tree has a node named wlan \(\_LimitLoadToDeviceTree\), so it never started on this board; dts/evb10.dts now carries a wlan node \(no registers, no interrupts\), and from run set3 on wifid is in the process table at about 75 s and sends Apple80211 requests to en0.
+- The daemon asks for the current network \(103\) while the link is up, and the file's join leaves the access point out of the BSS list, so the answer is now built from the link state; the property lists \(383\) and two flags \(470, 471\) it sets at every state change are accepted. The channels-info structure \(207\) and a few other types are still refused.
+- Scripted touches \(evb10-touch-script, runs set4 to set10\) unlocked the screen with two swipes up \(the first one is always lost\) but taps on the Settings icon did not open the app; that was Settings failing to start \(a Metal device for iconservicesagent and Preferences, and the copy of file-backed host buffers in the Mali driver\), not the taps.
+- Settings drives the whole join through the driver: the Wi-Fi pane lists the network, the password sheet takes the typed passphrase, Join arrives as an association request \(type 20, cipher 6: the 32-byte key the daemon derived from the SSID and passphrase\), the firmware joins 1.7 s later, DHCP binds about 3 s after that, and the check mark replaces the spinner when IO80211InterfaceIPConfigurationBusy goes false 4.5 to 9.5 s after the link \(runs t37, t42, t43\). Forget This Network arrives as a disassociate 0.6 s after the confirmation tap and the pane returns to the list \(run t43\).
+- Settings has a Wi-Fi row only if MobileGestalt's wifi capability is true, and in a virtual machine \(vmm-present\) it reads that from the property mac-address-wifi0 of /chosen; WifiNet.cpp sets it from the module's address once the firmware reports it. MobileGestalt caches the answer on the Data volume at the first boot, so a Data volume that booted without the property keeps answering false until the cache file is deleted or the volume rebuilt.
+- The spinner stayed 64 s \(run t36\) because the address configuration's ARP monitor reads the router's replies through /dev/bpf and the interface gave the packet filter no frames: an ifnet that is not a stock Ethernet driver must supply set\_bpf\_tap and call it with every frame in both directions, Ethernet header included. With the tap the busy flag clears in 4.5 to 9.5 s. The firmware also passes only the multicast groups it was told about, so allmulti is set to 1; IPv6 neighbour discovery then arrives.
+- 5 GHz does not work yet. After a successful join to the 2.4 GHz access point \(-80 dBm\) the firmware roamed to the same network's 5 GHz access point \(event 19\) and the TCP payload counter then rose by 96 bytes in 30 s, from 188826 to 188922 \(run t42\); a join after Forget This Network went to the 5 GHz access point and its association was not acknowledged \(event 7 status 5\), so the pane said "Unable to join the network" \(run t43\). The scan lists the 2.4 GHz access point at -44 dBm in one run and -80 dBm in another, and the firmware's link reading is -80 dBm. The CLM blob is not loaded \(the vendor's is data 1.39.1 of 2021, the firmware's built-in one 9.7.7 of 2023\) and the nvram has ccode=0; neither was tried. Locking the radio to 2.4 GHz with WLC\_SET\_BAND \(tried as a boot argument and removed again\) did not help: the scans then listed only 2412 MHz entries, but both joins of run t46 ended after 0.5 s with event 0 status 3 \(no network found\), where the first joins of runs t36, t37, t42 and t43, without the lock, took 1.7 to 1.8 s and succeeded.
+
+### Completion criteria
+
+- Device-verified for the join and the data path: a scan lists access points, a WPA2-PSK join carries traffic, and iPadOS's own DHCP client, DNS and TCP use the interface for a whole run without a panic. wifid is attached to en0 and answered, and the Settings Wi-Fi pane lists the network, joins it with a typed passphrase, shows the address and forgets it \(scripted touches and screenshots, runs t37 to t43\); throughput was not looked at.
+
+### Current limits
+
+- Opt-in with evb10-wifi=N and a network from the local join file; the committed arguments leave the module off. One module and one 2.4 GHz network at -80 dBm, in a series of runs; 5 GHz, WPA3 and open networks were not tried. The SDIO host is polled at about 25 MHz with no DMA and no SPI 204 interrupt; WL\_HOST\_WAKE and power save are not used; the Settings pane was checked with the passphrase of a WPA2-PSK network on one test router: open networks, WPA3, hidden networks and whether a joined network is remembered across boots were not tried, and the pane's Private Wi-Fi Address is not programmed into the firmware; 5 GHz fails \(a roam to it stops the traffic, a join to it is not acknowledged\) so the pane can report "Unable to join" when the firmware picks the 5 GHz access point; the CLM blob is not loaded; Bluetooth is not part of this area.
+
+### Next action
+
+- Interrupt \(SPI 204 and the in-band interrupt\), the host's DMA and 50 MHz so the data path no longer polls, and 5 GHz. First find why 5 GHz fails \(CLM blob, nvram regulatory settings, TX power\); then an open network and WPA3 from the pane.
+
+### Evidence
+
+- `device`: [From a freshly reset board at the U-Boot prompt, the AP6398S answered on SDIO: OCR 0xb0ffff00 with 3 IO functions, RCA 1, CIS manufacturer 02d0:4359, ChipCommon CHIPID 0x17294359 \(BCM4359 revision 9\), CHIPCLKCSR 0x48; the CLK pad toggled in 7 of 10 samples.](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-sdio-id-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; tools/board/hw-reset.sh reset; sleep 25; python3 tools/board/sdio-probe.py --enter --log LOG</code>. Revision: `0d553069b92a5181ea5f41250f755e8aba96cda0`.
+- `device`: [The kernel \(display pass, evb10-wifi=1\) powered the AP6398S and read OCR ffff00 with 3 IO functions, RCA 1, MANFID 02d0:4359 and ChipCommon CHIPID 17294359 \(BCM4359 revision 9\) 0.43 s after the driver started; the CLK pad toggled in 10 of 20 samples and the 120 s capture ran on to SpringBoard without a panic.](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-kernel-id-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=120 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-wifi=1" tools/xnu-probe/run-kernel.sh wifi1</code>. Revision: `1396eba965fe210555e3c6e24b4dd720eaf15e65`.
+- `device`: [The kernel \(display pass, evb10-wifi=2\) switched the AP6398S to 4 bits at about 25 MHz, halted the ARM CR4, wrote fw\_bcm4359c0\_ag.bin \(673934 bytes\) at 0x160000 and the nvram \(4896 bytes\) at 0x23ece0 with CMD53 in 90 ms, read both back identical in 82 ms, released the core, and saw the HT clock available after 34 ms \(CHIPCLKCSR 0xd0\) and function 2 ready \(IORx 0x06\) 232 ms after the release; the 120 s capture ran on to SpringBoard without a panic.](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-firmware-run-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=120 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-wifi=2" tools/xnu-probe/run-kernel.sh wifi3</code>. Revision: `32ab3cd072d1447a06f714f593792675d7328242`.
+- `device`: [The firmware answered SDPCM/BCDC \(version 9.87.51.11.102, CLM API 15.0, scan version 1\), accepted WLC\_UP and listed 35, 38 and 43 networks of both bands in three escans of 1.5 to 1.7 s \(run wifi5\).](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-scan-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; EXTRA_KERNEL_ARGS="evb10-wifi=3" CAPTURE_SECS=100 EARLY_STOP=0 tools/xnu-probe/run-kernel.sh wifi5</code>. Revision: `7552f8602bf3ca5022e917501bf5ea7b4b40ae93`.
+- `device`: [The firmware's supplicant joined a WPA2-PSK network 2.1 s after the join command \(events 3, 16, 7, 46 status 6\); the driver's own DHCP bound 3.1 s later, resolved the router and received 4 of 4 ping replies, 11 frames sent with none failed or dropped \(run wifi9b, signal -81 dBm on 2.4 GHz\).](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-join-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; EXTRA_KERNEL_ARGS="evb10-wifi=4" CAPTURE_SECS=100 EARLY_STOP=0 tools/xnu-probe/run-kernel.sh wifi9b</code>. Revision: `7552f8602bf3ca5022e917501bf5ea7b4b40ae93`.
+- `device`: [iPadOS used the module as en0: IOKit quiet 26 s into the boot log, the userland's DHCP client had its address by the 83 s status line, then DNS and 36 outgoing TCP connections \(run wifi19, 200 s, no panic\); an earlier 240 s run \(wifi17\) received 105 MB of TCP payload through en0 with the link up throughout.](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-os-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; EXTRA_KERNEL_ARGS="evb10-wifi=5" CAPTURE_SECS=200 EARLY_STOP=0 tools/xnu-probe/run-kernel.sh wifi19</code>. Revision: `7552f8602bf3ca5022e917501bf5ea7b4b40ae93`.
+- `device`: [wifid started with the wlan node and sent its Apple80211 requests to en0 \(run set5, evb10-wifi=5, no panic\); two swipes unlocked the screen and taps on the Settings icon did not open the app \(run set9\); the Wi-Fi pane itself was not seen](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-settings-20261031.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; EXTRA_KERNEL_ARGS="evb10-wifi=5 evb10-ps=12 evb10-shot-img=1 evb10-shot-scale=2 evb10-touch-script=125" CAPTURE_SECS=300 tools/xnu-probe/run-kernel.sh set9</code>. Revision: `760112b407ec0823fef97caeb69733434580b85e`.
+- `source`: [Hardware, the six checkpoints, findings, firmware, what is missing and the next step](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/docs/network.md)
+- `device`: [Settings on the board, driven by scripted touches and read from screenshots in the serial log: the Wi-Fi row, the network list, the password sheet with the typed passphrase, Join \(the firmware joined 1.7 s later, DHCP bound, the busy flag went false 4.5 to 9.5 s after the link and the row showed the check mark\), Forget This Network \(disassociate 0.6 s after the confirmation, the pane back to the list\), and a join to the 5 GHz access point that was not acknowledged and ended in "Unable to join the network" \(runs t36, t37, t42, t43; no panic\); also the two joins of run t46 with the radio locked to 2.4 GHz, which found no network and made the lock useless](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/wifi-settings-pane-20261031.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; EXTRA_KERNEL_ARGS="evb10-wifi=5 evb10-wifi-join=2 evb10-ps=12 evb10-touch-script=99 evb10-shot-img=1 evb10-shot-scale=2" CAPTURE_SECS=480 tools/xnu-probe/run-kernel.sh t43</code>. Revision: `bd28d8a3de879530bd8afaa36c15d6d3299be54e`.
+
+## Audio {#audio}
+
+`not-applicable`
+
+### Hardware and dependencies
+
+- No audio driver is part of this port.
+
+### Configuration
+
+- None.
+
+### Procedure
+
+- None.
+
+### Development findings
+
+- The userland runs without an audio device.
+
+### Completion criteria
+
+- Out of scope.
+
+### Current limits
+
+- Audio is outside the current scope of the board.
+
+### Next action
+
+- Choose a codec path when the scope extends.
+
+### Evidence
+
+Collect evidence using the next action.
+
+## Power {#power}
+
+`not-applicable`
+
+### Hardware and dependencies
+
+- The board is mains powered.
+
+### Configuration
+
+- The ADT sets sleep-disabled through the OS profile defaults.
+
+### Procedure
+
+- None.
+
+### Development findings
+
+- Suspend and resume are not implemented. The GPU runs at a fixed clock and the CPUs at the firmware clock.
+
+### Completion criteria
+
+- Out of scope.
+
+### Current limits
+
+- No battery, regulator or clock management beyond what the drivers need to start.
+
+### Next action
+
+- Add CPU and GPU frequency control.
+
+### Evidence
+
+Collect evidence using the next action.
+
+## Image assembly {#packaging}
+
+`device-verified`
+
+Components: `XnuPrelink`, `DarwinBoot`, `SoftwareAES`.
+
+### Hardware and dependencies
+
+- XNU of the OS profile, ARM64, SoC and device patch series, generated Apple device tree, payload volume of 96 MiB, owner trust-cache digests.
+
+### Configuration
+
+- payload.\* in board.toml and the \[adt\] tables; the device tree is generated from dts/evb10.dts.
+- payload.kernel\_args lists the boot arguments grouped by purpose.
+
+### Procedure
+
+- Run scripts/build-evb10-kernel.sh, then ./unixnu build payload with --unique-chip-id.
+
+### Development findings
+
+- A rebuild from the six pushed repositories in an empty directory \(docs/reproduce.md\) reaches launchd with about 110 processes and Mali-composited frames; the feeds.toml pin of the SoC repository has to include the dts change that stops exporting interrupts on the eMMC and UART nodes, because an exported interrupts property without AAPL,phandle makes IOKit start-up take a data abort. The second trust\_cache\_sha256 entry changes with every rebuild because the user-space binaries are not bit-for-bit reproducible.
+- The device series must not touch the context of the hunks of earlier series: the userland-mounts patch is generated by patches/tools/make-patches.py from a tree that has the earlier series applied.
+- The Mali driver carries weak fallbacks for the display driver's GPU hand-off, because the display-less pass links it too \(kernel patches call its test hooks\); the display archive's strong definitions replace them.
+- Changing the XNU patch list recreates the prepared source tree, and preparing it downloads the DriverKit headers the feed leaves out, so that rebuild needs network access \(through the proxy, if there is one, even when the build runs under env -i\).
+- Each defconfig name is its own output directory \(out/evb10/&lt;os&gt;/evb10 and .../evb10\_display\), so the display scripts read the display-less kernel from the sibling directory.
+- The payload rides in a boot image through U-Boot's fastboot, whose download buffer is 112 MiB; 96 MiB of payload fits, 128 MiB was refused.
+- The payload step of unixnu refuses a kernel command line longer than 1000 bytes \('the kernel command line is 1018 bytes; the limit is 1000'\) before the board is touched. The defaults of board.toml are 884 bytes, so debugging arguments are added per run through EXTRA\_KERNEL\_ARGS, which replaces defaults of the same name.
+- A driver that only the display probe calls \(Evb10Wifi\) is built by a plain build-evb10-drivers.py step and force-loaded by the display defconfig alone; a build with only the display-less defconfig does not contain it, and its log strings \(evb10: wifi\) tell which kernel a run used.
+- package/Evb10Wifi gained CMD53, 4-bit mode, backplane and ARM CR4 control and the firmware download \(evb10-wifi=2\); the images enter the kernel as wifi\_fw.inc, generated into the build tree's kits/evb10 \(a link to package/\) and ignored by git.
+- The original AppleImage4 \(it matches on /defaults\) waits without a timeout for IOAESAccelerator while it starts; without a provider IOKit never goes quiet and the userland's network configuration waits for it. The SoftwareAES component \(a software AES-CBC behind IOAESAccelerator, CONFIG\_XNU\_NATIVE\_AES=y in the SoC repository's rk3588.config, build-software-aes-bindings.py in board.toml\) provides it: IOKit is quiet 26 s into the boot log.
+
+### Completion criteria
+
+- The payload boots on the board to the lock screen.
+
+### Current limits
+
+- The two-pass kernel build of this layout completes on Linux \(evb10\_defconfig, then evb10\_display\_defconfig; kernel.macho 55.0 MB, sha256 db5e4c058e6516d9cb886d2819d1ca02366a29b9748fbd6b15123e0023e5bf2f, the one booted in run v1\). The payload needs a platform seed and the owner trust-cache digests, which are in no repository.
+
+### Next action
+
+- Make the user-space build reproducible, or compute the second trust\_cache\_sha256 entry in the payload step, so that board.toml does not change with every rebuild.
+
+### Evidence
+
+- `source`: [Device patch order](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/patches/xnu/series)
+- `device`: [A payload assembled from this layout \(96 MiB in a 106553344-byte boot image\) booted through U-Boot's fastboot to a running backboardd and SpringBoard with Mali-composited frames and no panic in 235 s; kernel.macho 55017472 bytes, sha256 db5e4c05 \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd UniXNU-evb10 &amp;&amp; scripts/build-evb10-kernel.sh; cd ../uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+## Diagnostics {#diagnostics}
+
+`device-verified`
+
+### Hardware and dependencies
+
+- UART2 serial console at 1.5 Mbaud; DEVELOPMENT kernel.
+
+### Configuration
+
+- Kernel arguments -v, serial=3, vc\_mirror=1, debug=0x10014e, -enable\_kprintf\_spam.
+- evb10-ps=N, evb10-bt, evb10-bt2, evb10-bt3, evb10-bt4 and mali-timeline=1 are added per run through EXTRA\_KERNEL\_ARGS: the process table costs the serial line about 3 MB a run and moves the frame rate, and the command line is limited to 1000 bytes.
+- evb10-thr=N sets how many threads of each process the table shows \(default 8\): the thread that holds the lock or the paging reference is often not among the first eight.
+
+### Procedure
+
+- Read the serial console. evb10-ps prints the process table, evb10-bt prints user stacks of the named processes for symbolication on the host.
+
+### Development findings
+
+- Console lines longer than about 255 characters lose their tail.
+- The serial input of XNU is dead on this board, so there is no command channel; judge the kernel's progress from the serial output only.
+- The reset-path breadcrumbs of a secondary core are 16 words \(128 bytes\) per core, as rk3588-smp-el2.patch stores them; the dump reads them with that stride and prints the TTBR1, TCR and TTBR0 the core had when it was about to enable the MMU.
+- A thread that waits in vm\_object\_destroy \(a file's last mapping went away and its vnode is reclaimed\) waits for the object's paging and activity counts; the table now prints the object \(references, paging, activity, resident and wired pages, the first wired pages\) next to such a thread, which is how a buffer object pinning a file's pages was found to hold up the render server.
+- evb10\_range\_is\_file\_backed \(in the same patch\) tells a driver whether a task's address range sits on a vnode pager's pages; package/Mali uses it to copy such pages instead of pinning them.
+
+### Completion criteria
+
+- Every boot stage prints a checkpoint to the serial console.
+
+### Current limits
+
+- Panics reset the board after the text is out; no panic screen is drawn.
+
+### Next action
+
+- Add a panic screen on the frame buffer.
+
+### Evidence
+
+- `source`: [Process exit trace](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/patches/xnu/evb10-exit-trace.patch)
+- `device`: [Every stage of the boot printed a time-stamped checkpoint: U-Boot hand-off 4.6 s, UEFI 4.8 s, the UniXNU menu entry 20.7 s, hand-off to the kernel 20.8 s, first kernel line 21.3 s, root accepted 24.0 s, launchd 54.9 s, backboardd on the Mali 69.4 s and SpringBoard 96.1 s \(run v1\)](https://github.com/Ken-u/UniXNU-evb10/blob/8fa827d9f50efab222b73dbee8aa6613ff6dada7/evidence/boot-v1-20261030.txt)
+  Command: <code>cd uefi-evb10 &amp;&amp; CAPTURE_SECS=235 EARLY_STOP=0 EXTRA_KERNEL_ARGS="evb10-touch-demo=120 mali-timeline=1" tools/xnu-probe/run-kernel.sh v1</code>. Revision: `833f90fb52890090ad2bdd79285cc527b00d3ead`.
+
+</div>
