@@ -78,6 +78,11 @@ jobs:
             echo "$(brew --prefix unifdef)/bin" >> "$GITHUB_PATH"
           fi
 
+      - name: Diagnose script version
+        run: |
+          echo "=== tree/scripts/build-xnu-4k-baseline.sh installhdrs 附近 ==="
+          grep -n "installhdrs SDKROOT=macosx\|XNU_AVAILABILITY_PL\|make_symbol_aliasing" out/*/*/*/tree/scripts/build-xnu-4k-baseline.sh || true
+
       - name: Build kernel
         id: kernel
         env:
