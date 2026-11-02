@@ -154,6 +154,23 @@ fi
 if [ ! -f "$KERNEL_SDKROOT/usr/local/lib/kernel/libfirehose_kernel.a" ]; then
   bash scripts/build-firehose.sh
 fi
+# The macOS firehose build (xcodebuild install) does not install the private
+# firehose_buffer_private.h header that bsd/kern/subr_log.c includes as
+# "os/firehose_buffer_private.h". The Linux branch of build-firehose.sh installs
+# it with unifdef; do the same here so the kernel build does not stop with
+# 'os/firehose_buffer_private.h file not found'. Install it under both the
+# kernel and plain os include paths the compiler searches.
+if [ -f "$KERNEL_SDKROOT/usr/local/lib/kernel/libfirehose_kernel.a" ] && \
+   [ ! -f "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" ]; then
+  SRC=.cache/libdispatch-work/os/firehose_buffer_private.h
+  if [ -f "$SRC" ]; then
+    mkdir -p "$KERNEL_SDKROOT/usr/local/include/kernel/os" "$KERNEL_SDKROOT/usr/local/include/os"
+    unifdef -DKERNEL=1 -DOS_FIREHOSE_SPI=1 -DOS_VOUCHER_ACTIVITY_SPI_TYPES=1 -UOS_VOUCHER_ACTIVITY_SPI \
+      -o "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" "$SRC" || [ $? -eq 1 ]
+    cp -f "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" \
+       "$KERNEL_SDKROOT/usr/local/include/os/firehose_buffer_private.h" 2>/dev/null || true
+  fi
+fi
 if [ "$(uname -s)" = Linux ]; then
   python3 scripts/linux/prepare-xnu.py libs
 fi
