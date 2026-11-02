@@ -91,9 +91,8 @@ jobs:
           shopt -s nullglob
           for log in "$GITHUB_WORKSPACE"/out/*/*/*/logs/*.log; do
             echo "== $log ($(wc -l < "$log") lines)"
-            grep -nE 'error:|ERROR|\*\*\* \[' "$log" | tail -n 40 || true
-            echo '== tail'
-            tail -n 40 "$log"
+            echo "== full content =="
+            cat "$log"
           done
 
       - name: Build payload
@@ -117,6 +116,15 @@ jobs:
         with:
           name: fuxi-build-logs
           path: out/*/*/*/logs/*.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload full kernel log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: fuxi-kernel-bootstrap-log
+          path: out/*/*/*/logs/kernel-bootstrap.log
           if-no-files-found: warn
           retention-days: 7
 
