@@ -132,14 +132,14 @@ for header in Path('refer/libdispatch/os').glob('*.h'):
 PY
 # Xcode 26's MacOSX SDK no longer ships usr/local/libexec/availability.pl, but
 # xnu's bsd/sys/make_symbol_aliasing.sh still looks it up at
-# ${SDKROOT}${DRIVERKITROOT}/usr/local/libexec/availability.pl during installhdrs.
-# UniXNU builds its own availability.pl into the fakeroot; link it into the SDK so
-# the _symbol_aliasing.h generation finds it. (DRIVERKITROOT is empty on MacOSX.)
-if [ -x "$KERNEL_SDKROOT/usr/local/libexec/availability.pl" ]; then
-  SDK_LIBEXEC="$(xcrun -sdk macosx -show-sdk-path)/usr/local/libexec"
-  if [ -n "$SDK_LIBEXEC" ] && [ -d "$SDK_LIBEXEC" ]; then
-    ln -sf "$KERNEL_SDKROOT/usr/local/libexec/availability.pl" "$SDK_LIBEXEC/availability.pl" 2>/dev/null \
-      || cp -f "$KERNEL_SDKROOT/usr/local/libexec/availability.pl" "$SDK_LIBEXEC/availability.pl" 2>/dev/null || true
+# ${SDKROOT}${DRIVERKITROOT}/usr/local/libexec/availability.pl during installhdrs,
+# so the _symbol_aliasing.h generation fails. UniXNU already builds availability.pl
+# into the fakeroot and exports it as XNU_AVAILABILITY_PL; patch the xnu script to
+# prefer that variable instead of probing the (now missing) SDK path.
+if [ -f ".cache/xnu-work/bsd/sys/make_symbol_aliasing.sh" ]; then
+  if ! grep -q 'XNU_AVAILABILITY_PL' ".cache/xnu-work/bsd/sys/make_symbol_aliasing.sh"; then
+    sed -i.bak 's#^AVAILABILITY_PL="\${SDKROOT}/\${DRIVERKITROOT}/usr/local/libexec/availability.pl"#AVAILABILITY_PL="${XNU_AVAILABILITY_PL:-${SDKROOT}/${DRIVERKITROOT}/usr/local/libexec/availability.pl}"#' \
+      ".cache/xnu-work/bsd/sys/make_symbol_aliasing.sh"
   fi
 fi
 if [ ! -f "$KERNEL_SDKROOT/.xnu-$XNU_VERSION-headers" ]; then
