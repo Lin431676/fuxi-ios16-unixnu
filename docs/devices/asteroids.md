@@ -6,7 +6,7 @@
 
 Nothing Phone \(3a\) runs the unchanged iPad7,1 iPadOS 17.7.11 image from its UFS userdata partition, with shared SM7635 support and board-owned storage, GPU, input and power integration. Bring-up runs as numbered staged tests; their results are in docs/asteroids-gpu-gen8.md and docs/asteroids-touch.md of rootstockos/iosonandng.
 
-Source record: [porting.toml](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/porting.toml), `279598b9867be6175aaaff0a63867d9234f276e1`.
+Source record: [porting.toml](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/porting.toml), `689c07d87c7c9f980e16aa608b8bcd8f82f2661d`.
 
 This page is generated from the device record.
 
@@ -75,7 +75,7 @@ Components: `ArmDTPlatform`, `XnuPrelink`.
 
 ### Evidence
 
-- `source`: [Format 2 board configuration with the SM7635 SoC and 21H461 OS profiles.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/board.toml)
+- `source`: [Format 2 board configuration with the SM7635 SoC and 21H461 OS profiles.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
 
 ## Firmware and boot {#firmware}
 
@@ -115,7 +115,7 @@ Components: `DarwinBoot`.
 
 ### Evidence
 
-- `source`: [\[bootimg\] and \[firmware\] select uefi-asteroids and the payload in the kernel image.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/board.toml)
+- `source`: [\[bootimg\] and \[firmware\] select uefi-asteroids and the payload in the kernel image.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
 
 ## CPU and interrupts {#cpu}
 
@@ -159,7 +159,7 @@ Components: `ArmCpu`.
 
 ### Evidence
 
-- `source`: [EPSS CPU governor with touch boost and frame floor.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/package/CpuFreqProbe.cpp)
+- `source`: [EPSS CPU governor with touch boost and frame floor.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/CpuFreqProbe.cpp)
 
 ## Memory and DMA {#memory}
 
@@ -198,7 +198,7 @@ Components: `ArmCpu`.
 
 ### Evidence
 
-- `source`: [Memory node for the XNU window's DRAM bank.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/dts/asteroids.dts)
+- `source`: [Memory node for the XNU window's DRAM bank.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/dts/asteroids.dts)
 
 ## Storage and root {#storage}
 
@@ -240,7 +240,7 @@ Components: `ShengUfs`, `RamBlock`, `SoftwareAES`, `VirtioMmioBlock`, `VerifiedR
 
 ### Evidence
 
-- `device`: [T29 booted iPadOS 17.7.11 from the UFS root with persistent Data to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/board.toml)
+- `device`: [T29 booted iPadOS 17.7.11 from the UFS root with persistent Data to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
   Command: <code>fastboot boot local/unixnu-asteroids-t29-boot.img</code>. Revision: `adf900cf453a6b318864913757f588c9f661596f`.
 
 ## Display {#display}
@@ -290,6 +290,7 @@ Components: `GopFramebuffer`.
 - T76 \(2026-10-30\): the board classes here register through OSKextRegisterBoardClasses \(zzyg-board-class-registration.patch\), under the kext lock, in place of preModLoad/postModLoad alone, which deadlocked T75f's boot \(storage area\).
 - T76's first kernel build \(run 41109301209\) failed: XNU has no kOSReturnNoMemory; OSKextRegisterBoardClasses and its callers use kOSKextReturnNoMemory \(libkern/OSKextLib.h\), and the helper has a prototype before its definition.
 - T76's second kernel build \(run 41111730079\) failed in ShengPlatformPower.cpp: BoardClasses.h had been included after the file's last \#include, which there sits inside the ShengPlatformPower class; every probe now includes it after its first \#include.
+- T89 \(2026-11-02\): BootLog.c prints the microphone's \[mic port\] row \(native\_mic\_port, audio area\) after \[mic regs\]; BootLogStandins.c gives it a weak stand-in.
 
 ### Completion criteria
 
@@ -305,7 +306,7 @@ Components: `GopFramebuffer`.
 
 ### Evidence
 
-- `device`: [T34b: GPU copy to the panel, no tearing or stale patches, stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/board.toml)
+- `device`: [T34b: GPU copy to the panel, no tearing or stale patches, stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
   Command: <code>fastboot boot local/unixnu-asteroids-t34b-boot.img</code>. Revision: `e022e84a9721ea6408ea12665b5a23e9b89fc5f6`.
 
 ## Input {#input}
@@ -352,7 +353,7 @@ Components: `ShengHidInput`, `ShengNovatekTouch`, `QcomGeniSpi`.
 
 ### Evidence
 
-- `device`: [Touch input works on the desktop \(stage 6\).](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/package/AsteroidsTouchProbe.cpp)
+- `device`: [Touch input works on the desktop \(stage 6\).](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/AsteroidsTouchProbe.cpp)
   Command: <code>fastboot boot local/unixnu-asteroids-t34b-boot.img</code>. Revision: `e022e84a9721ea6408ea12665b5a23e9b89fc5f6`.
 
 ## GPU {#gpu}
@@ -465,6 +466,10 @@ Components: `Adreno740`, `AdrenoFirmware`, `AdrenoPM4`, `ArmSmmu4K`, `Sm7635Plat
 - T86d \(2026-11-01, pdbaq\): blocks still in the wallpaper's flower shadows, no backboardd crash, L inp 62/5. The first boot was refused \(Load Error\) for every image: slot a was unbootable with its retry count spent, as nothing marks our boots successful; fastboot set\_active a reset it \(retry count 7\).
 - T80o \(2026-11-01, pdbaqol, add-on 28: the runtime's 16 in every process\): no blocks. So the blocks are drawn live by the render server's 64-byte answer, not saved in a wallpaper render, and not drawn by another process. MobileSlideShow's sig 6 abort happens here too, so it is not the answer's.
 - T87 \(2026-11-01, AdrenoMetal 541a19a, UniXNU 3fc28a6\): letters put one answer back to the runtime's in the render server: A the format-free alignments, B minimumLinearTextureAlignmentForPixelFormat:, C requiredLinearTextureBytesPerRowForDescriptor:; with l each distinct question and answer goes to m2v/gpu/answers-&lt;pid&gt;.txt. Planned boots pdbaqlA, pdbaqlB, pdbaqlC.
+- T87a \(2026-11-02, pdbaqlA\): no blocks, not 120 Hz and far better than 15 fps \(user\). answers-&lt;pid&gt;.txt: the render server asks only deviceLinearTextureAlignmentBytes, linearTextureAlignmentBytes and deviceLinearReadOnlyTextureAlignmentBytes, once each; never minimumLinearTextureAlignmentForPixelFormat: or requiredLinearTextureBytesPerRowForDescriptor:. So A is T80o again: L inp 538/19, refused for pitch 246, 29509 copies. The blocks and the copies T79 removed come from the same answer. T87az \(A plus z, no shader priming\) booted for the post-crash 120 Hz question.
+- T88 \(2026-11-02, AdrenoMetal eedebfa, UniXNU d0443d7\): the bridge answers the runtime's 16 again. UniXNU patches/mesa/turnip-narrow-linear-rows.patch: the A8xx texture descriptor states a linear row pitch in bits \(TEX\_LINE\_OFFSET\), and only render targets and the 2D engine \(A2D pitch shr 6\) step rows at 64 bytes, so an explicit DRM\_FORMAT\_MOD\_LINEAR image that is never an attachment or storage image takes rows at any multiple of 16 bytes and of its texel \(descriptor alignment field clamped to 0\); transfers touching one are skipped. Core Animation's sampled textures then bind in place at 16-byte rows without the copies. Planned boot pdbaql: no blocks, smooth, and pitch refusals near 0.
+- T87az \(2026-11-02, pdbaqlAz\): priming off \(PR libs 0/0\), maybe slightly smoother than T87a \(user: possibly placebo\), L inp 224/8, 127 pitch refusals, 20738 copies: priming is not the main cost.
+- GPU work shelved \(2026-11-02, AdrenoMetal 7e19eb9, UniXNU eb5bf59\): the user calls T87a's state good enough. Default: the runtime's 16-byte linear answer \(no blocks, faster than T78 but not T79's 120 Hz\). Not built or booted: T88 \(turnip-narrow-linear-rows.patch, UniXNU d0443d7\) and its CI run were dropped untested. Removed: letters A, B, C, the y source dump \(its watch read unmapped client memory and crashed backboardd\) and z \(no priming, no clear gain\). Open: what in the render server the 64-byte answer draws as blocks \(its sampled sources are clean in memory and on the GPU\); why a backboardd restarted after a crash runs at 120 Hz; MobileSlideShow sig 6 in every run since T79, T80o included.
 
 ### Completion criteria
 
@@ -480,7 +485,7 @@ Components: `Adreno740`, `AdrenoFirmware`, `AdrenoPM4`, `ArmSmmu4K`, `Sm7635Plat
 
 ### Evidence
 
-- `device`: [GPU compositing and the GPU panel copy run stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/package/GpuPowerProbe.cpp)
+- `device`: [GPU compositing and the GPU panel copy run stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/GpuPowerProbe.cpp)
   Command: <code>fastboot boot local/unixnu-asteroids-t34b-boot.img</code>. Revision: `e022e84a9721ea6408ea12665b5a23e9b89fc5f6`.
 
 ## clock {#clock}
@@ -521,7 +526,7 @@ Components: `QcomPmicRtc`.
 
 ### Evidence
 
-- `device`: [T39e: the time set in Settings survived a restart; Settings &gt; Date &amp; Time opens.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/board.toml)
+- `device`: [T39e: the time set in Settings survived a restart; Settings &gt; Date &amp; Time opens.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
   Command: <code>fastboot boot local/unixnu-asteroids-t39e-boot.img</code>. Revision: `e4d1092cc3d051617ee88858b153ed2ba0d456fd`.
 
 ## Network {#network}
@@ -599,6 +604,7 @@ Collect evidence using the next action.
 - T51: the 20-second capture came back complete \(2000 of 2000 periods\) but silent: peak 33 in the first second, exactly 0 in the next 19. The mic path delivers no codec data.
 - T76 \(2026-10-30\): the board classes here register through OSKextRegisterBoardClasses \(zzyg-board-class-registration.patch\), under the kext lock, in place of preModLoad/postModLoad alone, which deadlocked T75f's boot \(storage area\).
 - T76's second kernel build \(run 41111730079\) failed in ShengPlatformPower.cpp: BoardClasses.h had been included after the file's last \#include, which there sits inside the ShengPlatformPower class; every probe now includes it after its first \#include.
+- T89 \(2026-11-02\): T51's capture was digital zero after its first second, the decimator fed nothing. The probe took AMIC1 through TX SMIC MUX0 into DEC0 \(DMA channel mask 1\); the vendor's handset-mic path \(mixer\_paths\_volcano\_qrd.xml amic\_1\_3\) takes AMIC1 through TX SMIC MUX1 = SWR\_MIC0 into DEC1 and AMIC3 through SMIC MUX2 = SWR\_MIC4 into DEC2, both on TX\_AIF1\_CAP, and its default sets TX SMIC MUX0 to ZERO; the vendor TX macro passes the decimator mask as the codec DMA channel mask \(tx\_macro\_get\_channel\_map\). The VA macro's SoundWire mic clock setup for a VA-hosted master \(bolero 2.1: VA\_TOP\_CSR\_SWR\_MIC\_CTL0-2 = 0xCC\) is already in the probe. asteroids-mic-dec=&lt;n&gt; \(default 1\) picks the decimator \(mux 0x100 + 8n, path 0x400 + 0x80n\) and the capture asks for mask 1 &lt;&lt; n; \[mic port\] reads back the decimator's muxes and path, the codec's data port 1 \(PortCtrl, ChannelEn in both banks, IntStat, PrepareStatus\) and SCP\_FrameCtrl in both banks, and the master's port 1 control, 300 ms into the capture. Boot: asteroids-mic=7 asteroids-mic-capture-s=20.
 
 ### Completion criteria
 
@@ -615,7 +621,7 @@ Collect evidence using the next action.
 
 ### Evidence
 
-- `host`: [PASS: 207 AudioReach packet checks, including the 3a's primary MI2S port and the 32-bit speaker device format.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/scripts/check-audioreach-host.py)
+- `host`: [PASS: 207 AudioReach packet checks, including the 3a's primary MI2S port and the 32-bit speaker device format.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/scripts/check-audioreach-host.py)
   Command: <code>python3 scripts/check-audioreach-host.py</code>. Revision: `b1621b32a2513ba8e2c4c599d4f4baf602a7369a`.
 - `device`: [T40k-spk-sd1: the boot tone and iOS sounds played through both speakers; \[amps\] showed the boost converters active and \[audio-io\] 8.3 M frames without gaps in 494 s.](https://github.com/rootstockos/UniXNU-asteroids/commit/b1621b32a2513ba8e2c4c599d4f4baf602a7369a)
   Command: <code>fastboot boot with boot args sheng-audio=3 asteroids-audio-i2s=0x200200 sheng-audio-tone-ms=4000</code>. Revision: `49ec1ccb18fd6b7ddd23b25b2c4ae96cd084ad1a`.
@@ -660,7 +666,7 @@ Components: `AppleKeyStoreState`.
 
 ### Evidence
 
-- `device`: [T29: with the stand-in, SpringBoard boots to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/package/KeyStoreProbe.cpp)
+- `device`: [T29: with the stand-in, SpringBoard boots to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/KeyStoreProbe.cpp)
   Command: <code>fastboot boot local/unixnu-asteroids-t29-boot.img</code>. Revision: `adf900cf453a6b318864913757f588c9f661596f`.
 
 ## Image assembly {#packaging}
@@ -700,7 +706,7 @@ Components: `AppleKeyStoreState`.
 
 ### Evidence
 
-- `source`: [Board patch series after the arch, SoC and OS series.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/patches/xnu/series)
+- `source`: [Board patch series after the arch, SoC and OS series.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/patches/xnu/series)
 
 ## Diagnostics {#diagnostics}
 
@@ -738,6 +744,7 @@ Components: `AppleKeyStoreState`.
 - T64: \[gpu uc\] rows: the GPU probe's stage \(0x108 passed, 0x10e missed\), its kernel-client test counters \(rounds, steps, first error and its step, burst, system BOs, opens\) and the test's result lines.
 - T65: \[bo pool\] in the boot log shows the GPU BO pool next to \[bo memory\]: MiB and chunks reserved, the reservation's and write-combine's IOReturn, BOs it served, BOs sent to system memory for lack of room, MiB in use and peak.
 - T73 \(2026-10-30\): until the root is mounted, the UFS log shows \[late probe\] \(bsd\_autoconf's probe step, key events and CPU clock stages\) and \[kernel threads\]: every kernel thread that keeps its stack while it waits, with name, state, wait event and unslid return addresses \(boot\_kthread\_blocked\_rows\), '\*' for bsd\_autoconf's thread.
+- T89 \(2026-11-02\): the boot log adds \[mic port\] \(native\_mic\_port: the microphone decimator, the codec's and the master's data port 1 while the capture runs; audio area\).
 
 ### Completion criteria
 
@@ -753,6 +760,6 @@ Components: `AppleKeyStoreState`.
 
 ### Evidence
 
-- `source`: [Live page and banner rows.](https://github.com/rootstockos/UniXNU-asteroids/blob/279598b9867be6175aaaff0a63867d9234f276e1/package/BootProgress.c)
+- `source`: [Live page and banner rows.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/BootProgress.c)
 
 </div>
