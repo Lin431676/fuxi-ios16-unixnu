@@ -80,8 +80,11 @@ jobs:
 
       - name: Diagnose script version
         run: |
-          echo "=== tree/scripts/build-xnu-4k-baseline.sh installhdrs 附近 ==="
-          grep -n "installhdrs SDKROOT=macosx\|XNU_AVAILABILITY_PL\|make_symbol_aliasing" out/*/*/*/tree/scripts/build-xnu-4k-baseline.sh || true
+          echo "=== tree/scripts/build-xnu-4k-baseline.sh firehose 附近 ==="
+          grep -n "firehose_buffer_private\|refer/libdispatch\|libfirehose_kernel" out/*/*/*/tree/scripts/build-xnu-4k-baseline.sh || true
+          echo "=== refer/libdispatch 状态 ==="
+          ls -la out/*/*/*/tree/refer/ 2>/dev/null | head -20 || true
+          ls -la out/*/*/*/tree/refer/libdispatch/os/firehose_buffer_private.h 2>/dev/null || echo "firehose 头文件不在 refer/libdispatch"
 
       - name: Build kernel
         id: kernel
@@ -89,6 +92,22 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           ./unixnu build kernel
+
+      - name: Diagnose actual script
+        if: always()
+        run: |
+          SCRIPT=$(ls out/*/*/*/tree/scripts/build-xnu-4k-baseline.sh 2>/dev/null | head -1)
+          echo "script=$SCRIPT"
+          if [ -n "$SCRIPT" ]; then
+            echo "=== 总行数 ==="
+            wc -l "$SCRIPT"
+            echo "=== firehose-fix 出现次数 ==="
+            grep -c "firehose-fix" "$SCRIPT" || echo 0
+            echo "=== 主编译行号 ==="
+            grep -n "XNU_BUILD_TARGET:-build" "$SCRIPT" | head -1
+            echo "=== 前5行 ==="
+            head -5 "$SCRIPT"
+          fi
 
       - name: Kernel log tail
         if: always()
