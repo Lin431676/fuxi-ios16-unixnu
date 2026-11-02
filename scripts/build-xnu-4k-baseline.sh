@@ -163,8 +163,11 @@ fi
 # only when the .a is missing, which is not the case here). Install it under both
 # the kernel and plain os include paths the compiler searches.
 if [ ! -f "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" ]; then
+  echo "firehose-fix: installing firehose_buffer_private.h (pwd=$(pwd))"
+  echo "firehose-fix: refer/libdispatch exists? $(ls -d refer/libdispatch 2>/dev/null || echo NO)"
   for SRC in refer/libdispatch/os/firehose_buffer_private.h .cache/libdispatch-work/os/firehose_buffer_private.h; do
     if [ -f "$SRC" ]; then
+      echo "firehose-fix: found header at $SRC"
       mkdir -p "$KERNEL_SDKROOT/usr/local/include/kernel/os" "$KERNEL_SDKROOT/usr/local/include/os"
       unifdef -DKERNEL=1 -DOS_FIREHOSE_SPI=1 -DOS_VOUCHER_ACTIVITY_SPI_TYPES=1 -UOS_VOUCHER_ACTIVITY_SPI \
         -o "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" "$SRC" || [ $? -eq 1 ]
@@ -173,6 +176,20 @@ if [ ! -f "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h
       break
     fi
   done
+  # Fallback: search the feeds dir (libdispatch is fetched to out/feeds/libdispatch-*)
+  if [ ! -f "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" ]; then
+    FOUND=$(find "$ROOT/../feeds" -name firehose_buffer_private.h 2>/dev/null | head -1)
+    if [ -n "$FOUND" ]; then
+      echo "firehose-fix: found header in feeds at $FOUND"
+      mkdir -p "$KERNEL_SDKROOT/usr/local/include/kernel/os" "$KERNEL_SDKROOT/usr/local/include/os"
+      unifdef -DKERNEL=1 -DOS_FIREHOSE_SPI=1 -DOS_VOUCHER_ACTIVITY_SPI_TYPES=1 -UOS_VOUCHER_ACTIVITY_SPI \
+        -o "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" "$FOUND" || [ $? -eq 1 ]
+      cp -f "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" \
+         "$KERNEL_SDKROOT/usr/local/include/os/firehose_buffer_private.h" 2>/dev/null || true
+    else
+      echo "firehose-fix: WARNING header not found anywhere"
+    fi
+  fi
 fi
 if [ "$(uname -s)" = Linux ]; then
   python3 scripts/linux/prepare-xnu.py libs
