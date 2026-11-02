@@ -24,6 +24,7 @@ Follow [Build and boot](/building), [porting steps](/porting/steps) and [log cap
 | [Xiaomi Mi 10 Ultra \(pxl777806\)](/devices/cas-pxl777806) | SM8250 | 1 | Repository link | [pxl777806/UniXNU-cas](https://github.com/pxl777806/UniXNU-cas) |
 | [Xiaomi Mi 9 \(cepheus\)](/devices/cepheus) | SM8150 | 1 | Device notes | [sxl47/UniXNU-cepheus](https://github.com/sxl47/UniXNU-cepheus) |
 | [Xiaomi Mi 9 \(c0der88\)](/devices/cepheus-c0der88) | SM8150 | 1 | Repository link | [c0der88/UniXNU-cepheus](https://github.com/c0der88/UniXNU-cepheus) |
+| [Xiaomi Mi 9 \(cepheus\) \(didazhiqian\)](/devices/cepheus-didazhiqian) | SM8150 | 1 | Repository link | [didazhiqian/UniXNU-cepheus1](https://github.com/didazhiqian/UniXNU-cepheus1) |
 | [Xiaomi Mi 9 \(cepheus\) \(YangQi0408\)](/devices/cepheus-yangqi0408) | SM8150 | 1 | Repository link | [YangQi0408/UniXNU-cepheus](https://github.com/YangQi0408/UniXNU-cepheus) |
 | [OnePlus 5 \(cheeseburger\)](/devices/cheeseburger) | MSM8998 | 2 | Record pending | [DinnerABC/UniXNU-cheeseburger](https://github.com/DinnerABC/UniXNU-cheeseburger) |
 | [OnePlus 5 \(lss717\)](/devices/cheeseburger-lss717) | MSM8998 | 1 | Repository link | [lss717/UniXNU-cheeseburger](https://github.com/lss717/UniXNU-cheeseburger) |
@@ -55,7 +56,7 @@ Follow [Build and boot](/building), [porting steps](/porting/steps) and [log cap
 | [OnePlus 15T \(fairlady\)](/devices/fairlady) | SM8850 | 1 | Device notes | [Osilvfe/UniXNU-fairlady](https://github.com/Osilvfe/UniXNU-fairlady) |
 | [OnePlus 6T \(fajita\)](/devices/fajita) | SDM845 | 1 | Device notes | [johnpanos/UniXNU-fajita](https://github.com/johnpanos/UniXNU-fajita) |
 | [LG V50 ThinQ \(LM-V500, flashlm\)](/devices/flashlm) | SM8150 | 1 | Repository link | [drx1x2/UniXNU-flashlm](https://github.com/drx1x2/UniXNU-flashlm) |
-| [Xiaomi 13 \(fuxi\)](/devices/fuxi) | SM8550 | 1 | Device notes | [matejkoo217/UniXNU-fuxi](https://github.com/matejkoo217/UniXNU-fuxi) |
+| [Xiaomi 13 \(fuxi\)](/devices/fuxi) | SM8550 | 2 | Porting record | [matejkoo217/UniXNU-fuxi](https://github.com/matejkoo217/UniXNU-fuxi) |
 | [Xiaomi 13 \(0721GPT\)](/devices/fuxi-0721gpt) | SM8550 | 1 | Repository link | [0721GPT/UniXNU-fuxi](https://github.com/0721GPT/UniXNU-fuxi) |
 | [Xiaomi 13 \(hanzi123-bilp\)](/devices/fuxi-hanzi123-bilp) | SM8550 | 1 | Repository link | [hanzi123-bilp/unixnu-fuxi](https://github.com/hanzi123-bilp/unixnu-fuxi) |
 | [Xiaomi 13 \(Kerfand\)](/devices/fuxi-kerfand) | SM8550 | 1 | Repository link | [Kerfand/UniXNU-fuxi](https://github.com/Kerfand/UniXNU-fuxi) |
@@ -94,6 +95,7 @@ Follow [Build and boot](/building), [porting steps](/porting/steps) and [log cap
 | [OnePlus 8T \(kebab\)](/devices/kebab) | SM8250 | 1 | Device notes | [GFander/UniXNU-kebab](https://github.com/GFander/UniXNU-kebab) |
 | [OnePlus 8T \(stevedang67889\)](/devices/kebab-stevedang67889) | SM8250 | 2 | Porting record | [stevedang67889/UniXNU-kebab](https://github.com/stevedang67889/UniXNU-kebab) |
 | [Google Pixel 9 Pro XL \(komodo\)](/devices/komodo) | zumapro | 1 | Device notes | [Trijal08/UniXNU-komodo](https://github.com/Trijal08/UniXNU-komodo) |
+| [realme GT8 Pro \(lafa\) RMX5200: UniXNU bring-up](/devices/lafa) | SM8850 | 1 | Repository link | [ky554640/UniXNU-lafa](https://github.com/ky554640/UniXNU-lafa) |
 | [OnePlus 9R \(lemonades\)](/devices/lemonades) | SM8250 | 1 | Device notes | [soooink/UniXNU-lemonades](https://github.com/soooink/UniXNU-lemonades) |
 | [Xiaomi Pad 6 Pro \(liuqin\)](/devices/liuqin) | SM8475 | 1 | Device notes | [1696108518/UniXNU-liuqin](https://github.com/1696108518/UniXNU-liuqin) |
 | [Redmi K30 Pro Zoom Edition \(lmipro\)](/devices/lmipro) | SM8250 | 2 | Record pending | [yang232138/UniXNU-lmipro-v2](https://github.com/yang232138/UniXNU-lmipro-v2) |
@@ -108,7 +110,7 @@ Follow [Build and boot](/building), [porting steps](/porting/steps) and [log cap
 | [POCO X7 / Redmi Note 14 Pro 5G \(malachite\)](/devices/malachite) | MT6878 | 1 | Device notes | [ghidgdsr/uefi-malachite](https://github.com/ghidgdsr/uefi-malachite) |
 | [Redmi Note 12 Turbo / POCO F5 \(marble\)](/devices/marble) | SM7475 | 2 | Porting record | [sing0626/UniXNU-marble](https://github.com/sing0626/UniXNU-marble) |
 | [Redmi Note 12 Turbo / POCO F5 \(marble\), Qualcomm SM7475 \(Snapdragon 7+ Gen 2\) \(MiLacy\)](/devices/marble-milacy) | SM7475 | 2 | Porting record | [MiLacy/UniXNU-marble](https://github.com/MiLacy/UniXNU-marble) |
-| [Xiaomi Redmi Note 9 \(merlinx\)](/devices/merlinx) | MT6768 | 2 | Record pending | [Dracen-W/UniXNU-merlinx](https://github.com/Dracen-W/UniXNU-merlinx) |
+| [Xiaomi Redmi Note 9 \(merlinx\)](/devices/merlinx) | MT6768 | 2 | Porting record | [Dracen-W/UniXNU-merlinx](https://github.com/Dracen-W/UniXNU-merlinx) |
 | [LG G8X ThinQ \(LM-G850, mh2lm\)](/devices/mh2lm) | SM8150 | 1 | Repository link | [shenli99/UniXNU-mh2lm](https://github.com/shenli99/UniXNU-mh2lm) |
 | [Redmi K60 \(mondrian/SM8475\): UniXNU UEFI bring-up](/devices/mondrian) | SM8475 | 2 | Porting record | [Emilelu/UniXNU-mondrian](https://github.com/Emilelu/UniXNU-mondrian) |
 | [Redmi K60 \(mondrian/SM8475\): UniXNU UEFI bring-up \(mzyxsl\)](/devices/mondrian-mzyxsl) | SM8475 | 2 | Porting record | [mzyxsl/UniXNU-mondrian](https://github.com/mzyxsl/UniXNU-mondrian) |
@@ -153,6 +155,7 @@ Follow [Build and boot](/building), [porting steps](/porting/steps) and [log cap
 | [Xiaomi Mi MIX 2S \(PuszekReksio\)](/devices/polaris-puszekreksio) | SDM845 | 1 | Repository link | [PuszekReksio/UniXNU-judyln](https://github.com/PuszekReksio/UniXNU-judyln) |
 | [Xiaomi Mi MIX 2S \(SPRMD\)](/devices/polaris-sprmd) | SDM845 | 1 | Repository link | [SPRMD/UniXNU-polaris](https://github.com/SPRMD/UniXNU-polaris) |
 | [Nothing Phone \(2\) \(pong\)](/devices/pong) | SM8475 | 2 | Porting record | [Chengdong-Yu/UniXNU-pong](https://github.com/Chengdong-Yu/UniXNU-pong) |
+| [Nothing Phone \(2\): UniXNU UEFI bring-up \(AGXMX666\)](/devices/pong-agxmx666) | SM8475 | 2 | Porting record | [AGXMX666/UniXNU-pong](https://github.com/AGXMX666/UniXNU-pong) |
 | [Nothing Phone \(2\): UniXNU UEFI bring-up \(hxzbaka\)](/devices/pong-hxzbaka) | SM8475 | 1 | Repository link | [hxzbaka/UniXNU-pong](https://github.com/hxzbaka/UniXNU-pong) |
 | [Nothing Phone \(2\): UniXNU UEFI bring-up \(Y3d4\)](/devices/pong-y3d4) | SM8475 | 1 | Repository link | [Y3d4/UniXNU-pong-clean](https://github.com/Y3d4/UniXNU-pong-clean) |
 | [Xiaomi 17 \(pudding, qcom,canoe, SM8850\)](/devices/pudding) | SM8850 | 2 | Porting record | [daisukiKaffuChino/UniXNU-pudding](https://github.com/daisukiKaffuChino/UniXNU-pudding) |
@@ -171,16 +174,19 @@ Follow [Build and boot](/building), [porting steps](/porting/steps) and [log cap
 | [Xiaomi Pad 6S Pro \(alghiffaryfa19\)](/devices/sheng-alghiffaryfa19) | SM8550 | 1 | Repository link | [alghiffaryfa19/UniXNU-sheng](https://github.com/alghiffaryfa19/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(bai805\)](/devices/sheng-bai805) | SM8550 | 2 | Porting record | [bai805/UniXNU-sheng](https://github.com/bai805/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(FFT-infra\)](/devices/sheng-fft-infra) | SM8550 | 2 | Porting record | [FFT-infra/UniXNU-alioth-sheng-template](https://github.com/FFT-infra/UniXNU-alioth-sheng-template) |
+| [Xiaomi Pad 6S Pro \(ht94911\)](/devices/sheng-ht94911) | SM8550 | 2 | Porting record | [ht94911/UniXNU-sheng](https://github.com/ht94911/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(hxzbaka\)](/devices/sheng-hxzbaka) | SM8550 | 2 | Porting record | [hxzbaka/UniXNU-sheng](https://github.com/hxzbaka/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(jn7163\)](/devices/sheng-jn7163) | SM8550 | 1 | Repository link | [jn7163/UniXNU-sheng](https://github.com/jn7163/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(jsongmax\)](/devices/sheng-jsongmax) | SM8550 | 2 | Porting record | [jsongmax/UniXNU-sheng](https://github.com/jsongmax/UniXNU-sheng) |
+| [Xiaomi Pad 6S Pro \(kkkpc\)](/devices/sheng-kkkpc) | SM8550 | 1 | Repository link | [kkkpc/UniXNU-fuxi-xiaomi13-forked-bypass-sheng](https://github.com/kkkpc/UniXNU-fuxi-xiaomi13-forked-bypass-sheng) |
 | [Xiaomi Pad 6S Pro \(LiangKam\)](/devices/sheng-liangkam) | SM8550 | 1 | Repository link | [LiangKam/UniXNU-sheng](https://github.com/LiangKam/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(lilinnan\)](/devices/sheng-lilinnan) | SM8550 | 1 | Repository link | [lilinnan/UniXNU-sheng](https://github.com/lilinnan/UniXNU-sheng) |
+| [Xiaomi Pad 6S Pro \(Lithosss\)](/devices/sheng-lithosss) | SM8550 | 2 | Porting record | [Lithosss/UniXNU-sheng](https://github.com/Lithosss/UniXNU-sheng) |
 | [macOS on sheng](/devices/sheng-macos) | SM8550 | 1 | Device notes | [CrossDarwin/macOS-ForSheng](https://github.com/CrossDarwin/macOS-ForSheng) |
 | [Xiaomi Pad 6S Pro \(TheArchitectEngineer\)](/devices/sheng-thearchitectengineer) | SM8550 | 2 | Porting record | [TheArchitectEngineer/UniXNU-sheng](https://github.com/TheArchitectEngineer/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(tkings4chan\)](/devices/sheng-tkings4chan) | SM8550 | 2 | Porting record | [tkings4chan/UniXNU-sheng](https://github.com/tkings4chan/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(v1-727\)](/devices/sheng-v1-727) | SM8550 | 2 | Porting record | [v1-727/UniXNU-sheng](https://github.com/v1-727/UniXNU-sheng) |
-| [Xiaomi Pad 6S Pro \(yeyingjun-codes\)](/devices/sheng-yeyingjun-codes) | SM8550 | 2 | Porting record | [yeyingjun-codes/UniXNU-sheng](https://github.com/yeyingjun-codes/UniXNU-sheng) |
+| [Xiaomi Pad 6S Pro \(yeyingjun-codes\)](/devices/sheng-yeyingjun-codes) | SM8550 | 2 | Record pending | [yeyingjun-codes/UniXNU-sheng](https://github.com/yeyingjun-codes/UniXNU-sheng) |
 | [Xiaomi Pad 6S Pro \(yuyaukong\)](/devices/sheng-yuyaukong) | SM8550 | 1 | Repository link | [yuyaukong/UniXNU-sheng](https://github.com/yuyaukong/UniXNU-sheng) |
 | [Xiaomi 14 Pro 23116PN5BC](/devices/shennong) | SM8650 | 2 | Record pending | [YX2748198202-lab/UniXNU-shennong](https://github.com/YX2748198202-lab/UniXNU-shennong) |
 | [Xiaomi Mi 8 SE \(sirius\)](/devices/sirius) | SDM710 | 2 | Porting record | [57UU/UniXNU-sirius](https://github.com/57UU/UniXNU-sirius) |
@@ -216,6 +222,7 @@ Follow [Build and boot](/building), [porting steps](/porting/steps) and [log cap
 | [Redmi K70 \(ahzcpp\)](/devices/vermeer-ahzcpp) | SM8550 | 2 | Record pending | [ahzcpp/UniXNU-vermeer](https://github.com/ahzcpp/UniXNU-vermeer) |
 | [Redmi K70 \(xyyyds0106\)](/devices/vermeer-xyyyds0106) | SM8550 | 1 | Repository link | [xyyyds0106/UniXNU-vermeer](https://github.com/xyyyds0106/UniXNU-vermeer) |
 | [Redmi K70 \(yyx2025\)](/devices/vermeer-yyx2025) | SM8550 | 1 | Repository link | [yyx2025/UniXNU-vermeer](https://github.com/yyx2025/UniXNU-vermeer) |
+| [Xiaomi 11T Pro \(vili, 2107113SG\), SM8350 / Snapdragon 888](/devices/vili) | SM8350 | 2 | Record pending | [Matthew7577/UniXNU-vili](https://github.com/Matthew7577/UniXNU-vili) |
 | [Xiaomi MI 6X](/devices/wayne) | SDM660 | 2 | Record pending | [gs240333/UniXNU-wayne](https://github.com/gs240333/UniXNU-wayne) |
 | [OPPO Find X9 \(x9\)](/devices/x9) | MT6993 | 1 | Device notes | [tosasitill/unixnu_x9](https://github.com/tosasitill/unixnu_x9) |
 | [Redmi Pad format-2 qualification candidate; boot Mu and cust UniXNU must remain separate](/devices/yunluo) | MT6789 | 2 | Porting record | [woaphone/UniXNU-yunluo](https://github.com/woaphone/UniXNU-yunluo) |
