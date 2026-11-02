@@ -118,17 +118,24 @@ fi
 python3 - <<'PY'
 from pathlib import Path
 import subprocess
-output = Path('.cache/fakeroot/usr/local/include/os')
-output.mkdir(parents=True, exist_ok=True)
+# xnu's INCFLAGS_SDK is -I$(SDKROOT)/usr/local/include/kernel, so os/*.h headers
+# (e.g. os/firehose_buffer_private.h included by bsd/kern/subr_log.c) must live under
+# include/kernel/os. The upstream script only wrote include/os, which breaks the kernel
+# build with 'os/firehose_buffer_private.h file not found'. Install to both locations.
+outputs = [Path('.cache/fakeroot/usr/local/include/kernel/os'),
+           Path('.cache/fakeroot/usr/local/include/os')]
+for output in outputs:
+    output.mkdir(parents=True, exist_ok=True)
 for header in Path('refer/libdispatch/os').glob('*.h'):
     result = subprocess.run(['unifdef', '-DKERNEL=1', '-DOS_FIREHOSE_SPI=1',
                              '-DOS_VOUCHER_ACTIVITY_SPI_TYPES=1',
                              '-UOS_VOUCHER_ACTIVITY_SPI', str(header)], capture_output=True)
     if result.returncode not in (0, 1):
         raise SystemExit(result.stderr.decode())
-    target = output / header.name
-    if not target.exists() or target.read_bytes() != result.stdout:
-        target.write_bytes(result.stdout)
+    for output in outputs:
+        target = output / header.name
+        if not target.exists() or target.read_bytes() != result.stdout:
+            target.write_bytes(result.stdout)
 PY
 # Xcode 26's MacOSX SDK no longer ships usr/local/libexec/availability.pl, but
 # xnu's bsd/sys/make_symbol_aliasing.sh still looks it up at
@@ -154,41 +161,8 @@ fi
 if [ ! -f "$KERNEL_SDKROOT/usr/local/lib/kernel/libfirehose_kernel.a" ]; then
   bash scripts/build-firehose.sh
 fi
-echo "MARKER-AFTER-FIREHOSE-BUILD: reached, KERNEL_SDKROOT=$KERNEL_SDKROOT"
-echo "MARKER: kernel/os exists? $(ls "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" 2>/dev/null || echo NO)"
-echo "MARKER: os exists? $(ls "$KERNEL_SDKROOT/usr/local/include/os/firehose_buffer_private.h" 2>/dev/null || echo NO)"
-echo "MARKER: refer/libdispatch exists? $(ls -d refer/libdispatch 2>/dev/null || echo NO)"
-echo "MARKER: libdispatch-work exists? $(ls -d .cache/libdispatch-work 2>/dev/null || echo NO)"
-# The macOS firehose build (xcodebuild install) does not install the private
-# firehose_buffer_private.h header that bsd/kern/subr_log.c includes as
-# "os/firehose_buffer_private.h". The Linux branch of build-firehose.sh installs
-# it with unifdef; do the same here so the kernel build does not stop with
-# 'os/firehose_buffer_private.h file not found'. The header lives in the already
-# cloned refer/libdispatch tree (build-firehose.sh clones .cache/libdispatch-work
-# only when the .a is missing, which is not the case here). Install it under both
-# the kernel and plain os include paths the compiler searches.
-if [ ! -f "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" ]; then
-  echo "firehose-fix: BEGIN pwd=$(pwd) ROOT=$ROOT"
-  echo "firehose-fix: ls refer/libdispatch: $(ls refer/libdispatch 2>/dev/null | head -3)"
-  echo "firehose-fix: ls .cache/libdispatch-work: $(ls .cache/libdispatch-work 2>/dev/null | head -3)"
-  # Search broadly: the header is in libdispatch (fetched to out/feeds/libdispatch-* or linked as refer/libdispatch)
-  FOUND=""
-  for SRC in refer/libdispatch/os/firehose_buffer_private.h .cache/libdispatch-work/os/firehose_buffer_private.h; do
-    if [ -f "$SRC" ]; then FOUND="$SRC"; break; fi
-  done
-  if [ -z "$FOUND" ]; then
-    FOUND=$(find . .. "$ROOT/.." "$ROOT/../.." -maxdepth 4 -name firehose_buffer_private.h 2>/dev/null | head -1)
-  fi
-  if [ -n "$FOUND" ]; then
-    echo "firehose-fix: FOUND at $FOUND"
-    mkdir -p "$KERNEL_SDKROOT/usr/local/include/kernel/os" "$KERNEL_SDKROOT/usr/local/include/os"
-    cp -f "$FOUND" "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h"
-    cp -f "$FOUND" "$KERNEL_SDKROOT/usr/local/include/os/firehose_buffer_private.h" 2>/dev/null || true
-    echo "firehose-fix: installed size=$(wc -c < "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h")"
-  else
-    echo "firehose-fix: NOT FOUND anywhere"
-  fi
-fi
+echo "MARKER: kernel/os/firehose_buffer_private.h = $(ls -la "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" 2>/dev/null || echo MISSING)"
+echo "MARKER: os/firehose_buffer_private.h = $(ls -la "$KERNEL_SDKROOT/usr/local/include/os/firehose_buffer_private.h" 2>/dev/null || echo MISSING)"
 if [ "$(uname -s)" = Linux ]; then
   python3 scripts/linux/prepare-xnu.py libs
 fi
