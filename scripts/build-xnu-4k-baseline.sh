@@ -154,6 +154,11 @@ fi
 if [ ! -f "$KERNEL_SDKROOT/usr/local/lib/kernel/libfirehose_kernel.a" ]; then
   bash scripts/build-firehose.sh
 fi
+echo "MARKER-AFTER-FIREHOSE-BUILD: reached, KERNEL_SDKROOT=$KERNEL_SDKROOT"
+echo "MARKER: kernel/os exists? $(ls "$KERNEL_SDKROOT/usr/local/include/kernel/os/firehose_buffer_private.h" 2>/dev/null || echo NO)"
+echo "MARKER: os exists? $(ls "$KERNEL_SDKROOT/usr/local/include/os/firehose_buffer_private.h" 2>/dev/null || echo NO)"
+echo "MARKER: refer/libdispatch exists? $(ls -d refer/libdispatch 2>/dev/null || echo NO)"
+echo "MARKER: libdispatch-work exists? $(ls -d .cache/libdispatch-work 2>/dev/null || echo NO)"
 # The macOS firehose build (xcodebuild install) does not install the private
 # firehose_buffer_private.h header that bsd/kern/subr_log.c includes as
 # "os/firehose_buffer_private.h". The Linux branch of build-firehose.sh installs
