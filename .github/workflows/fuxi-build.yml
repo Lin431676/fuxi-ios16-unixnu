@@ -1,0 +1,136 @@
+name: fuxi iOS16 build
+
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: Build steps
+        type: choice
+        options:
+          - kernel
+          - kernel payload
+        default: kernel
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuxi-ios16-${{ github.ref }}-${{ inputs.steps }}
+  cancel-in-progress: false
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  HOMEBREW_NO_ENV_HINTS: 1
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 360
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      UNIXNU_DEVICE: ${{ github.workspace }}/device
+      DEFCONFIG: fuxi_softrender_defconfig
+      STEPS: ${{ inputs.steps }}
+    steps:
+      - name: Check out UniXNU
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Check out the device repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Lin431676/fuxi-ios16-device
+          ref: main
+          path: device
+          token: ${{ github.token }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
+      - name: defconfig
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./unixnu defconfig "$DEFCONFIG"
+
+      - name: fetch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./unixnu fetch
+
+      - name: ipsw fetch
+        run: |
+          ./unixnu ipsw fetch
+
+      - name: Install host tools
+        run: |
+          brew install llvm lld mtools dtc
+          if ! command -v unifdef >/dev/null; then
+            brew install unifdef
+            echo "$(brew --prefix unifdef)/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Build kernel
+        id: kernel
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./unixnu build kernel
+
+      - name: Kernel log tail
+        if: always()
+        run: |
+          shopt -s nullglob
+          for log in "$GITHUB_WORKSPACE"/out/*/*/*/logs/*.log; do
+            echo "== $log ($(wc -l < "$log") lines)"
+            grep -nE 'error:|ERROR|\*\*\* \[' "$log" | tail -n 40 || true
+            echo '== tail'
+            tail -n 40 "$log"
+          done
+
+      - name: Build payload
+        id: payload
+        if: contains(inputs.steps, 'payload')
+        run: |
+          ./unixnu build payload
+
+      - name: Upload kernel artifact
+        if: always() && steps.kernel.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: fuxi-kernel-macho
+          path: out/*/*/*/kernel/kernel.macho
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: fuxi-build-logs
+          path: out/*/*/*/logs/*.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Summary
+        if: always()
+        env:
+          KERNEL: ${{ steps.kernel.outcome }}
+          PAYLOAD: ${{ steps.payload.outcome }}
+        run: |
+          {
+            echo "## fuxi iOS 16.7.16 build (fuxi_softrender_defconfig, $STEPS)"
+            echo "| Step | Result |"
+            echo "| --- | --- |"
+            echo "| kernel | ${KERNEL:-skipped} |"
+            echo "| payload | ${PAYLOAD:-skipped} |"
+            xcodebuild -version | head -n 1
+          } >> "$GITHUB_STEP_SUMMARY"
