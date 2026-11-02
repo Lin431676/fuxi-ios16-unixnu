@@ -130,6 +130,18 @@ for header in Path('refer/libdispatch/os').glob('*.h'):
     if not target.exists() or target.read_bytes() != result.stdout:
         target.write_bytes(result.stdout)
 PY
+# Xcode 26's MacOSX SDK no longer ships usr/local/libexec/availability.pl, but
+# xnu's bsd/sys/make_symbol_aliasing.sh still looks it up at
+# ${SDKROOT}${DRIVERKITROOT}/usr/local/libexec/availability.pl during installhdrs.
+# UniXNU builds its own availability.pl into the fakeroot; link it into the SDK so
+# the _symbol_aliasing.h generation finds it. (DRIVERKITROOT is empty on MacOSX.)
+if [ -x "$KERNEL_SDKROOT/usr/local/libexec/availability.pl" ]; then
+  SDK_LIBEXEC="$(xcrun -sdk macosx -show-sdk-path)/usr/local/libexec"
+  if [ -n "$SDK_LIBEXEC" ] && [ -d "$SDK_LIBEXEC" ]; then
+    ln -sf "$KERNEL_SDKROOT/usr/local/libexec/availability.pl" "$SDK_LIBEXEC/availability.pl" 2>/dev/null \
+      || cp -f "$KERNEL_SDKROOT/usr/local/libexec/availability.pl" "$SDK_LIBEXEC/availability.pl" 2>/dev/null || true
+  fi
+fi
 if [ ! -f "$KERNEL_SDKROOT/.xnu-$XNU_VERSION-headers" ]; then
   make -C .cache/xnu-work installhdrs SDKROOT=macosx ARCH_CONFIGS=ARM64 \
     MACHINE_CONFIGS=BCM2837 KERNEL_CONFIGS=DEVELOPMENT \
