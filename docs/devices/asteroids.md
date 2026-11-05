@@ -6,7 +6,7 @@
 
 Nothing Phone \(3a\) runs the unchanged iPad7,1 iPadOS 17.7.11 image from its UFS userdata partition, with shared SM7635 support and board-owned storage, GPU, input and power integration. Bring-up runs as numbered staged tests; their results are in docs/asteroids-gpu-gen8.md and docs/asteroids-touch.md of rootstockos/iosonandng.
 
-Source record: [porting.toml](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/porting.toml), `689c07d87c7c9f980e16aa608b8bcd8f82f2661d`.
+Source record: [porting.toml](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/porting.toml), `6370e66cc460202756058ae53f73afdb69abd364`.
 
 This page is generated from the device record.
 
@@ -48,6 +48,7 @@ Components: `ArmDTPlatform`, `XnuPrelink`.
 
 ### Development findings
 
+- The Data seed workflow \(.github/workflows/data-seed.yml\) takes an os\_profile input \(2026-11-04\): ipados-17.7.11-21H461 as before, or ios-27.0.1-24A446 with the iPhone17,4 OS volume \(details in the storage area\).
 - Format 2 builds every selected component's kernel recipe, so \[kernel\] archives lists them as component: entries in the format 1 order; build-arm-driver.py skips Adreno740 and VirtioMmioBlock while their configuration switches are off, as format 1 never built them \(T36 run 40297420036\).
 - Format 2 applies the arch, SoC and OS configuration fragments before the defconfig; bootstrap\_defconfig turns off the five options common.config adds, so both passes have their format 1 configuration \(checked with parse\_config: no differences\).
 - Format 2 keeps only catalog components, so the forks of NativeAdreno and NativeUfs moved from their legacy names to drivers/Adreno740 and drivers/ShengUfs; legacy aliases are made only for UniXNU's own sources.
@@ -60,6 +61,12 @@ Components: `ArmDTPlatform`, `XnuPrelink`.
 - T64 \(2026-10-29\): \[payload\] dram\_size 0x23FE00000 and \[payload.adt\] owned\_memory\_size 0x1F0000000 \(7.75 GiB\) over the whole high bank, which the uefi-asteroids map now declares as one run without GPU\_Pool; \[gpu\] gpu\_pool\_base and gpu\_pool\_bytes are gone with the BO pool \(memory area\).
 - T64: owned\_memory\_size is 0x180000000 \(6 GiB\) instead of 7.75 GiB until the kernel carries UniXNU 2867796's larger bootstrap table pool \(memory area\).
 - T76 \(2026-10-30\): gpu-addon.yml's encrypted artifact also carries NativeAdrenoMetal.unstripped and libvulkan\_freedreno.unstripped \(build-asteroids-metal-plugin.py keeps Turnip unstripped\), for symbolizing the encode thread's CPU profile; the phone gets neither.
+- arm64e requirements \(2026-11-03, https://unixnu.com/porting/arm64e, checked in recovery's Linux 6.6.114 on the 3a\): all 8 CPUs \(4 Cortex-A520 MIDR 0x410fd801, 4 Cortex-A720 0x410fd811\) report paca and pacg \(address and generic authentication\); the kernel runs with CONFIG\_ARM64\_PTR\_AUTH=y and CONFIG\_ARM64\_PTR\_AUTH\_KERNEL=y at EL1 under the same Qualcomm hypervisor, so EL1 writes the key registers and PAC instructions run without traps \(HCR\_EL2.API and APK set\). The user wants iPhone iOS 27, not iPadOS: upstream has only ipados profiles \(17.7.11, 26.5.2, 27.0.1-24A446\), so the port will carry its own iPhone iOS 27 profile after the upstream sync.
+- iPhone iOS 27 target \(owner, 2026-11-04\): iPhone 16 Plus, iPhone17,4 d48ap \(chip 0x8140, board 0x0a\), iOS 27.0.1 24A446, the build of the iPadOS 27 profile. Its kernelcache \(kernelcache.release.iphone17, decompressed 77987840 bytes, sha256 fa07057bf34f33af1ec26681ad0c87c13e5aaa548a300740eddb0e92876e5f95\) is a fileset of 305 entries at the classic iOS base \(AMFI at 0xfffffff00764ece0, the iPad's at 0xfffffe00...\). The UI scale is one whole number \(LegacyDisplayProbe.cpp publishes /chosen display-scale, 2 today = 540 points\): bring-up runs at 3 \(360 points, pixel exact\); the iPhone 16 Plus size \(430 points, 2.51\) needs a 1290x2796 frame scaled to the panel afterwards. hoshikv/UniXNU-peridot \(SM8635\) carries an unfinished ios-27.0.1-24A446 profile for iPhone14,5 \(no AMFI address, iPad root UUIDs as placeholders, no hardware result\).
+- iPhone17,4 pins \(2026-11-04, against the iPad17,3 24A446 kernelcache, sha256 38e6d9fa..., the iPadOS profile's pin\): all 32 compared kexts \(the 31 prelink roots, AMFI, IOMobileGraphicsFamily, IOSurface, IOHIDFamily, the kernel\) carry the same bundle versions. com.apple.iokit.IOHIDEventDriver is a codeless kext \(personalities only, load address INT64\_MAX\) on both, with no fileset entry on either, so all 31 roots apply and HidInputProbe needs no change \(the earlier note that it did was wrong\). AMFI early security init: the iPad wrapper \(0xfffffe00092551ac\) calls initializeAppleMobileFileIntegrity at 0xfffffe00092549f4; that function matches uniquely in the iPhone \_\_TEXT\_EXEC at 0xfffffff00920f854 \(12 to 48 masked instructions\), called from two sites as on the iPad, and its wrapper is 0xfffffff00921000c, byte for byte the iPad's. The fileset prelink links at the native address and ignores the profile slide. User space is not cache independent: on arm64e upstream's NativeAdrenoMetalPlugin.mm writes four QuartzCore globals and patches one instruction \(0x184461928\) at iPad 24A446 shared cache addresses, and package/AsteroidsMetalPlugin.mm writes the EDR headroom global the same way; on the iPhone's own dyld cache those addresses are other memory, so they need a per cache table before the first iPhone boot.
+- Per cache QuartzCore sites \(2026-11-04\): package/AsteroidsMetalPlugin.mm writes the EDR headroom override \(QuartzCore debug\_values index 21\) only where kQuartzCoreSites holds the running dyld shared cache's UUID, and marks 0x6EF0 elsewhere; CA\_DISPLAY\_EDR\_HEADROOM is set either way. Addresses by name from each cache's symbols \(ipsw dyld symaddr, local/tools/ipsw-bin\): iPad17,x CE33B2BA-2EBB-3B58-A04E-1953E12112AE debug\_values 0x1e7020fc0; iPhone17,4 A54D617A-342B-3A29-8F63-B9F93CE76141 0x1e7024fc0. In the iPhone cache QuartzCore's code sits at the iPad's addresses \(CARenderServerStart 0x1846dce88, framebuffer\_pixel\_format 0x184461838\) and its data 0x4000 higher \(\_ca\_debug\_options 0x1e702516c, is\_virtualized 0x1e701fdd9\), so the iPad address would have written another global silently. Upstream's NativeAdrenoMetalPlugin.mm, which writes more of them, is not built for this board. UniXNU 63b3d7e adds the ios-27.0.1-24A446 profile \(root volumes 634783FE OS, FA95C6F7 SystemOS\) and decrypts AEA images with ipsw on Linux; the iPhone userdata image \(15.02 GiB, OS 10104078336 bytes at 0x100000, SystemOS 6020923392 at 0x25a500000\) is in local/userdata-ios27, not written.
+- xnu-12377 patch stack for the iOS 27 profile \(2026-11-04, checked with git apply on xnu ac9718fb, as UniXNU patches.py applies it\): arch \(arm64e\) 64, SoC 2, OS 4 and device 12 patches apply in board order \(arch, SoC, OS, device\). UniXNU-sm7635-common 47dc6aa adds patches/xnu-12377 \(sm8550's versions; our two xnu-10063 SoC patches are identical to sm8550's\). patches/xnu-12377/series is sheng's xnu-12377 board series without its Wi-Fi and latency traces \(CPU idle, E/P Edge, audio add-on mount, source storage hook, iPadOS 27 bring-up\), our class registration, rootstockos/UniXNU's five xnu-10063 bring-up patches unchanged, and the watchdog policy ported to sheng's xnu-12377 call site. Not yet set for the profile: the board build scripts are iOS 17 arm64 only \(build-asteroids-platform-power.py requires the iOS 17 target; build-native-legacy-display.py and build-ufs-original-bindings.py match the 21H461 kernelcache\), and sheng builds its 27 display with its own build-gop-legacy-display-27.py.
+- iPhone17,4 class ABI fixtures \(2026-11-04\): sheng builds the iPadOS 27 display and input against reviewed iPad17,3 fixtures \(scripts/legacy-display-24A446.json, IOMobileFramebufferLegacy, 379 slots; hid-device-24A446.json, IOHIDDevice, 207\). scripts/remap-24A446-display-fixture.py \(with kcremap\_24A446.py\) rewrites them for the iPhone kernelcache: each address is moved by fileset entry, segment and offset and verified, vtable slots are the iPhone's own chained-fixup pointers with PAC key, diversity and address diversity equal to the iPad's and targets equal by offset or by masked code \(display 215 offset, 161 code, 3 kernel; HID 57, 146, 4; the kernel is built per SoC, so a kernel target is the iPhone vtable's own\), and the display fixture's 10 byte checks match exactly. collection\_slide is 0: the iPhone cache is already at the link base 0xfffffff007004000, where the iPad's 0x1f000000000 moves the iPad cache. Results: scripts/legacy-display-24A446-d48.json \(vtable 0xfffffff0082d2000\), scripts/hid-device-24A446-d48.json \(vtable 0xfffffff0082b26b0\).
 
 ### Completion criteria
 
@@ -75,7 +82,7 @@ Components: `ArmDTPlatform`, `XnuPrelink`.
 
 ### Evidence
 
-- `source`: [Format 2 board configuration with the SM7635 SoC and 21H461 OS profiles.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
+- `source`: [Format 2 board configuration with the SM7635 SoC and 21H461 OS profiles.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/board.toml)
 
 ## Firmware and boot {#firmware}
 
@@ -115,7 +122,7 @@ Components: `DarwinBoot`.
 
 ### Evidence
 
-- `source`: [\[bootimg\] and \[firmware\] select uefi-asteroids and the payload in the kernel image.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
+- `source`: [\[bootimg\] and \[firmware\] select uefi-asteroids and the payload in the kernel image.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/board.toml)
 
 ## CPU and interrupts {#cpu}
 
@@ -139,6 +146,7 @@ Components: `ArmCpu`.
 ### Development findings
 
 - The CPU governor is sheng's CpuFreqProbe with 4/3/1 CPUs per domain and no L3 vote \(the 3a has no EPSS L3\).
+- patches/xnu-12377 \(iOS 27 profile, 2026-11-04\) takes sheng's xnu-12377 CPU idle helper and E/P Edge scheduler \(zzye, zzyf\) in place of our xnu-10063 copies; the xnu-10063 zzyf also set \_\_ARM\_AMP\_\_ and two clusters in BCM2837.h, which sheng's xnu-12377 zzyf leaves to its iPadOS 27 bring-up patch \(not yet checked on the 3a\).
 - The E/P Edge scheduler and the idle-time helper are sheng's zzyf and zzye patches \(patches/xnu\).
 - T40c \(2026-10-27\): the cpu0 park thread is off by default \(sheng-cpu0-park=0, as UniXNU-sheng d361b53\): the E/P Edge scheduler places work by cluster, and T39b found the park thread holding cpu0 at 100 %. The governor and the AMP and idle patches already match sheng's latest.
 - T64 \(2026-10-29\): dts/asteroids.dts's memory node covers the whole high bank \(0x8C0000000 + 0x23FE00000\), equal to board.toml dram\_size, since the GPU pool at its top is gone \(memory area\).
@@ -159,7 +167,7 @@ Components: `ArmCpu`.
 
 ### Evidence
 
-- `source`: [EPSS CPU governor with touch boost and frame floor.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/CpuFreqProbe.cpp)
+- `source`: [EPSS CPU governor with touch boost and frame floor.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/package/CpuFreqProbe.cpp)
 
 ## Memory and DMA {#memory}
 
@@ -198,7 +206,7 @@ Components: `ArmCpu`.
 
 ### Evidence
 
-- `source`: [Memory node for the XNU window's DRAM bank.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/dts/asteroids.dts)
+- `source`: [Memory node for the XNU window's DRAM bank.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/dts/asteroids.dts)
 
 ## Storage and root {#storage}
 
@@ -220,6 +228,8 @@ Components: `ShengUfs`, `RamBlock`, `SoftwareAES`, `VirtioMmioBlock`, `VerifiedR
 
 ### Development findings
 
+- iOS 27 storage \(2026-11-04\): drivers/ShengUfs \(rootstockos/NativeUfs asteroids 9e1cc29\) merges UniXNU/ShengUfs main: the source API, the header-only policy handoff and readPolicyTable, which reads "&lt;window&gt;.vroot" and requires its size to be the bare hash table \(block count x 32\), so the userdata objects are the tables \(OS 78938112, SystemOS 47038464 bytes\) and the image was rebuilt. Kept ours where they met: TCR2 from IDR2 and the Linux-style display bank, the counters outside the verified block guard. package/SourceStorage.cpp, SourceRootPolicies.cpp, SourceRootBinding.cpp, BootReset.c and BootProcessWorker.c are sheng's \(965460a\), unchanged, for build-sheng-source-storage.py, which now looks in kits/&lt;board kit&gt; \(UniXNU bd4766a\). The Data seed workflow takes os\_profile: for ios-27.0.1-24A446 it fetches and decrypts the iPhone17,4 OS volume \(scripts/fetch-os-volume.py; ipsw and aea on macOS\) and seeds from its var tree \(launchd c640246d..., LastSystemVersion 24A446\).
+- iOS 27 root policies \(2026-11-04\): on arm64e component:ShengUfs builds the source storage runtime \(build-sheng-source-storage.py\), which mounts only a root authenticated by a signed policy. scripts/policies/ios-27.0.1-24A446/&\#123;OS,SystemOS&\#125; hold our own policies, signed with a local owner RSA-3072 key \(local/owner-keys, never in a repository; trusted key sha256 c97a039baef14b94...\) by scripts/sign-root-policies.py over the userdata image's windows: OS 10104078336 bytes, 2466816 blocks, sha256 b73d3753...; SystemOS 6020923392 bytes, 1469952 blocks, 17ca9d50.... scripts/verify-root-policies.py authenticated each with UniXNU's VerifiedRoot C code \(built as a Linux host library with its OpenSSL provider\): the full envelope, the 544-byte header alone, every block and the whole digest. Only the headers, trusted keys and records are here: the full manifests \(79 and 47 MB\) are the userdata image's objects OS.vroot and SystemOS.vroot \(XNU\_SOURCE\_STORAGE\_TABLES=userdata\), in local/userdata-ios27 \(not written\).
 - Format 2 builds VirtioMmioBlock as ShengUfs's dependency; build-arm-driver.py skips it while XNU\_NATIVE\_VIRTIO\_BLOCK is off.
 - NativeUfs \(the ShengUfs fork\) is built without the verified-root check until signed volume policies exist.
 - Its IOBlockStorageDevice imports bind against the original class in a bootstrap kernel candidate built first in CI.
@@ -240,7 +250,7 @@ Components: `ShengUfs`, `RamBlock`, `SoftwareAES`, `VirtioMmioBlock`, `VerifiedR
 
 ### Evidence
 
-- `device`: [T29 booted iPadOS 17.7.11 from the UFS root with persistent Data to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
+- `device`: [T29 booted iPadOS 17.7.11 from the UFS root with persistent Data to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/board.toml)
   Command: <code>fastboot boot local/unixnu-asteroids-t29-boot.img</code>. Revision: `adf900cf453a6b318864913757f588c9f661596f`.
 
 ## Display {#display}
@@ -263,6 +273,9 @@ Components: `GopFramebuffer`.
 
 ### Development findings
 
+- iOS 27 builder \(2026-11-04, not built yet\): scripts/build-native-legacy-display-27.py is sheng's build-gop-legacy-display-27.py \(UniXNU-sheng 965460a\) with the IPSW device's fixtures \(d48ap: legacy-display-24A446-d48.json, hid-device-24A446-d48.json\), IOMobileGraphicsFamily's text range from the fixture \(family\_text, the iPad range moved by its kext offset\) in place of the iPad constant, kits/asteroids, and this board's drivers from the iOS 17 builder \(CPU frequency, panel and brightness, TFA9873 speaker and audio DSP, battery, buttons, FocalTech touch over GENI SPI, GPU power with NativeAdreno's staged classes and the gen8 kits\) compiled with the 27 kernel flags. The HID event driver is compiled against the profile's pinned public IOHIDFamily \(NATIVE\_HID\_SOURCE\_API\) and bound to the original IOHIDDevice by sheng's slot and discriminator rules. Sheng's generated support file stubs boot progress \(none on 27\); our LegacyDisplayStubs.c is weak. The Metal accelerator comes from UniXNU's build-adreno740-accelerator.py \(d48ap plan\). Sheng's two-pass kernel build \(native-slide in cycle27.sh\) is not needed: the builder binds fixed collection addresses and XnuPrelink recomputes the adapter branches.
+- The display area owns only the 24A446 display and HID fixtures and their remap tools by name; scripts/policies \(iOS 27 root policies\) belongs to storage.
+- iOS 27 \(2026-11-04\): scripts/legacy-display-24A446-d48.json and hid-device-24A446-d48.json are sheng's iPad17,3 class fixtures remapped and verified for the iPhone17,4 kernelcache \(details in the configuration area\); the iOS 27 display builder that uses them is not written yet.
 - T37 \(2026-10-26\): DSI0 is reachable under Gunyah \(T37a st=1\), the brightness test ran \(T37b\), and with asteroids-panel=3 iOS sets the brightness and sleep turns the panel off and on again \(T37d\). It is a board default since then.
 - T37: the panel \(Visionox RM69220 AMOLED, video mode, DSI0 at 0x0ae94000, dsi-ctrl v2.8\) takes DCS commands through the controller's TPG command FIFO, scheduled for the first front-porch line \(package/PanelProbe.cpp, asteroids-panel=1..4\): brightness 51 hi lo \(10..4095\), off 28 + 10, on 11 + 29. The iOS brightness service is sheng's AppleARMBacklight.cpp with the DCS write instead of I2C \(package/AsteroidsBacklight.cpp\); level 0 turns the panel off.
 - The CPU copy \(143-285 ms a frame\) mapped the surfaces cacheable without invalidation and showed stale patches; the GPU copy removes both.
@@ -291,6 +304,9 @@ Components: `GopFramebuffer`.
 - T76's first kernel build \(run 41109301209\) failed: XNU has no kOSReturnNoMemory; OSKextRegisterBoardClasses and its callers use kOSKextReturnNoMemory \(libkern/OSKextLib.h\), and the helper has a prototype before its definition.
 - T76's second kernel build \(run 41111730079\) failed in ShengPlatformPower.cpp: BoardClasses.h had been included after the file's last \#include, which there sits inside the ShengPlatformPower class; every probe now includes it after its first \#include.
 - T89 \(2026-11-02\): BootLog.c prints the microphone's \[mic port\] row \(native\_mic\_port, audio area\) after \[mic regs\]; BootLogStandins.c gives it a weak stand-in.
+- T93 \(2026-11-02\): BootLog.c prints \[mic codec\] \(native\_mic\_codec, audio area\) after \[mic port\]; BootLogStandins.c gives it a weak stand-in.
+- T94 \(2026-11-02\): \[mic codec\] prints whenever \[mic port\] does.
+- T95 \(2026-11-02\): BootLog.c prints \[mic page\] \(native\_mic\_page, audio area\) after \[mic codec\]; BootLogStandins.c gives it a weak stand-in.
 
 ### Completion criteria
 
@@ -306,7 +322,7 @@ Components: `GopFramebuffer`.
 
 ### Evidence
 
-- `device`: [T34b: GPU copy to the panel, no tearing or stale patches, stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
+- `device`: [T34b: GPU copy to the panel, no tearing or stale patches, stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/board.toml)
   Command: <code>fastboot boot local/unixnu-asteroids-t34b-boot.img</code>. Revision: `e022e84a9721ea6408ea12665b5a23e9b89fc5f6`.
 
 ## Input {#input}
@@ -329,6 +345,7 @@ Components: `ShengHidInput`, `ShengNovatekTouch`, `QcomGeniSpi`.
 
 ### Development findings
 
+- iOS 27 input \(2026-11-04\): drivers/ShengHidInput moves to UniXNU/ShengHidInput 71a40e7 \(three commits: the arm64e event driver vtable copy re-signed with Apple's slot discriminators, which are name-derived and the same in every 24A446 IOHIDFamily-2238.120.5\) and is compiled with NATIVE\_HID\_SOURCE\_API by build-native-legacy-display-27.py.
 - Touch is polled; stage 2's RPMh votes need a completion check.
 - Every button constant equals sheng's \(SPMI arbiter v7 at the same addresses, same PPIDs\).
 - TouchState.cpp's placeholder button sink is gone: ButtonProbe.cpp owns native\_buttons\_set\_sink.
@@ -353,7 +370,7 @@ Components: `ShengHidInput`, `ShengNovatekTouch`, `QcomGeniSpi`.
 
 ### Evidence
 
-- `device`: [Touch input works on the desktop \(stage 6\).](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/AsteroidsTouchProbe.cpp)
+- `device`: [Touch input works on the desktop \(stage 6\).](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/package/AsteroidsTouchProbe.cpp)
   Command: <code>fastboot boot local/unixnu-asteroids-t34b-boot.img</code>. Revision: `e022e84a9721ea6408ea12665b5a23e9b89fc5f6`.
 
 ## GPU {#gpu}
@@ -470,6 +487,13 @@ Components: `Adreno740`, `AdrenoFirmware`, `AdrenoPM4`, `ArmSmmu4K`, `Sm7635Plat
 - T88 \(2026-11-02, AdrenoMetal eedebfa, UniXNU d0443d7\): the bridge answers the runtime's 16 again. UniXNU patches/mesa/turnip-narrow-linear-rows.patch: the A8xx texture descriptor states a linear row pitch in bits \(TEX\_LINE\_OFFSET\), and only render targets and the 2D engine \(A2D pitch shr 6\) step rows at 64 bytes, so an explicit DRM\_FORMAT\_MOD\_LINEAR image that is never an attachment or storage image takes rows at any multiple of 16 bytes and of its texel \(descriptor alignment field clamped to 0\); transfers touching one are skipped. Core Animation's sampled textures then bind in place at 16-byte rows without the copies. Planned boot pdbaql: no blocks, smooth, and pitch refusals near 0.
 - T87az \(2026-11-02, pdbaqlAz\): priming off \(PR libs 0/0\), maybe slightly smoother than T87a \(user: possibly placebo\), L inp 224/8, 127 pitch refusals, 20738 copies: priming is not the main cost.
 - GPU work shelved \(2026-11-02, AdrenoMetal 7e19eb9, UniXNU eb5bf59\): the user calls T87a's state good enough. Default: the runtime's 16-byte linear answer \(no blocks, faster than T78 but not T79's 120 Hz\). Not built or booted: T88 \(turnip-narrow-linear-rows.patch, UniXNU d0443d7\) and its CI run were dropped untested. Removed: letters A, B, C, the y source dump \(its watch read unmapped client memory and crashed backboardd\) and z \(no priming, no clear gain\). Open: what in the render server the 64-byte answer draws as blocks \(its sampled sources are clean in memory and on the GPU\); why a backboardd restarted after a crash runs at 120 Hz; MobileSlideShow sig 6 in every run since T79, T80o included.
+- Upstream sync \(2026-11-03, branches sync/upstream-2026-11-03; UniXNU main f61fd6c merged as dc88d19 + 969df26\): AdrenoMetal is upstream's \(UniXNU/AdrenoMetal 243d63c\) instead of the rootstock fork, whose T78-T88 experiments stay on its asteroids branch; upstream answers the runtime's 16-byte linear alignment as the shelved default did. The Mesa list is upstream's \(GMEM mutable and memory-side swap, transient attachments in GMEM, frame diagnostics, queue priorities, thread render mode\) plus turnip-a810-sysmem-ccu; turnip-render-mode-measured \(GMEM red/blue swap on the A810, T70-T74, now fixed upstream\) and the asteroids measurement patches \(stats, timing, submit trace: TU\_DW\_TRACE, gpu-trace.py\) are dropped. All patches apply in order at the Mesa pin. The kernel GPU driver stays the NativeAdreno gen8 fork \(upstream Adreno740 has no A8xx\). package/AsteroidsMetalPlugin.mm drops CacheImport.h and the shader-cache fallback \(pipelines are compiled on the device only upstream\) and keeps the pipeline-pack import.
+- Upstream's Turnip patches \(2026-11-03 sync\) call NativeAdrenoMethodSetPriority \(17\) and NativeAdrenoMethodNote \(18\); NativeAdreno 38227e7 declares them and their records in NativeAdrenoABI.h so Turnip compiles. The asteroids kernel implements neither and answers kIOReturnUnsupported, which Turnip takes as not accepted \(queue priorities stay normal, frame notes are dropped\). UniXNU acf69e3 gives turnip-frame-diagnostics.patch its missing new-file header, so git apply takes the whole recorded list \(gpu-addon run 41598242089 failed on both\).
+- sync1 \(2026-11-03; kernel run 41596757530, add-on run 41600013844\) broke the screen. backboardd crashed at 56 s with SIGSEGV at 0; its crash report from the Data volume, symbolized with the add-on's unstripped binaries: Turnip's tu\_emit\_subpass\_begin&lt;chip 8&gt; wrote through a null command stream after tu\_cs\_reserve\_space could not add a BO, under the bridge's RenderLowering::draw\_indexed. The kernel refused no BO \(\[bo memory\] refused 0\). The GPU then never finished fence 88 \(hangs 1, 5, 10 from 58 s, no restart\) and the kernel refused backboardd's reopen \(PUB no device: VkResultCode\(-3\)\), so the hangs followed the crash. 4 s before it the bridge rendered a memoryless BGRA8 1080x2392 texture through a 10 MB scratch image \(its pass splits into 2 instances\). The unified log stops 35 s before the crash. mixA \(the sync kernel with the pre-sync add-on: device 9be0e5b, AdrenoMetal 7e19eb9\) booted clean: no crash, 197 GMEM passes, fences to 1172, mic peaks 817 and 476. The fault is in the sync add-on \(upstream AdrenoMetal and the new Turnip list\).
+- T98: UniXNU 89438f4 adds turnip-darwin-first-alloc-failure.patch: the first failed Turnip BO allocation or map of a process goes to the kernel's report line as AF &lt;step&gt; s&lt;KiB&gt; f&lt;flags&gt; k&lt;status&gt; u&lt;MiB in use&gt; h&lt;largest hole MiB&gt; c&lt;cached MiB&gt; &lt;process&gt; \(steps r retired BOs, v GPU range, a BoAlloc, m BoMap, p BoCpuMap, i CPU mapping, H host import range\).
+- T98 \(2026-11-04; the sync kernel with add-on run 41624545358, UniXNU 89438f4\): 76 s with no crash, no GPU hang and fences to 1422, but also no AF line and no memoryless full-screen pass, so the allocation failure did not recur and was not measured. The RM gmem row reads 0 in every boot of the synced add-on \(T98 too\): its counters came from turnip-asteroids-stats.patch, which the sync dropped, so sync1's 0 GMEM passes was a missing counter, not a measurement.
+- T98 unlocked and looked right \(owner, 2026-11-04\); sync1 broke on its first unlock. sync1 ran with a cold shader cache \(V cache hit 0, miss 64; the first boot of upstream's shared shader cache\) and T98 with a warm one \(hit 60, miss 92\), so the failure may need a cold cache; not measured. T98 is the synced image kept; its first allocation failure line stays in as the check for a recurrence.
+- package/AsteroidsMetalPlugin.mm \(2026-11-04\): the arm64e EDR headroom write takes its QuartzCore address from kQuartzCoreSites, keyed by the running dyld shared cache's UUID \(iPad17,x 24A446 and iPhone17,4 24A446, read by name from each cache\), and writes nothing by address on another cache \(marker 0x6EF0\). The iPhone cache's QuartzCore data is 0x4000 above the iPad's; details in the configuration area.
 
 ### Completion criteria
 
@@ -481,11 +505,11 @@ Components: `Adreno740`, `AdrenoFirmware`, `AdrenoPM4`, `ArmSmmu4K`, `Sm7635Plat
 
 ### Next action
 
-- Boot T40e and compare frame rate and GPU stalls with GMEM against T40d.
+- If the synced add-on breaks again, read the AF report line in the kernel log \(T98's allocation failure check\).
 
 ### Evidence
 
-- `device`: [GPU compositing and the GPU panel copy run stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/GpuPowerProbe.cpp)
+- `device`: [GPU compositing and the GPU panel copy run stable.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/package/GpuPowerProbe.cpp)
   Command: <code>fastboot boot local/unixnu-asteroids-t34b-boot.img</code>. Revision: `e022e84a9721ea6408ea12665b5a23e9b89fc5f6`.
 
 ## clock {#clock}
@@ -526,7 +550,7 @@ Components: `QcomPmicRtc`.
 
 ### Evidence
 
-- `device`: [T39e: the time set in Settings survived a restart; Settings &gt; Date &amp; Time opens.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/board.toml)
+- `device`: [T39e: the time set in Settings survived a restart; Settings &gt; Date &amp; Time opens.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/board.toml)
   Command: <code>fastboot boot local/unixnu-asteroids-t39e-boot.img</code>. Revision: `e4d1092cc3d051617ee88858b153ed2ba0d456fd`.
 
 ## Network {#network}
@@ -579,7 +603,7 @@ Collect evidence using the next action.
 - sheng-audio takes bits \(sheng-adsp=2 is required, the default\): any nonzero value serves the audio service, 2 plays a 1.5 s 750 Hz test tone at boot, 8 runs the lock sound test.
 - sheng-audio-pa moves the DSP period buffer \(default 0xe6200000, the splash region's tail\); sheng-audio-tone-ms and sheng-audio-atten set the tone.
 - asteroids-audio-i2s = interface \| data lines &lt;&lt; 8 \| bits &lt;&lt; 16 \(default primary MI2S, SD1, 32-bit: the amplifiers take their data on gpio17\); asteroids-audio-prm bits \(default 3\): 1 LPASS core vote, 2 MI2S bit clock request.
-- asteroids-mic=&lt;stage&gt; \(default 0, with sheng-audio\) brings up the WCD9378 microphone path in stages: 1 rails \(ldob7, ldob8\) and codec reset \(gpio162\), 2 PRM votes and VA/TX core clocks, 3 LPI SoundWire pins and VA/TX macro clocks, 4 VA SoundWire master \(0x33b0000, v1.7\) and enumeration, 5 codec init \(SCP setup, io\_init, SDCA class load\), 6 capture path \(ports, micbias 1, SmartMIC0 sequencer, TX decimator 0\), 7 DSP capture graphs and a 2 s capture test, 8 capture for the plug-in. asteroids-mic-port = sample interval \| offset1 &lt;&lt; 8 \| lane &lt;&lt; 16 \(default 1 \| 1 &lt;&lt; 8\). asteroids-mic-mux=1 switches the VA macro to its own core clock \(0x3420000 = 1\) as the vendor clock manager does \(default off\).
+- asteroids-mic=&lt;stage&gt; \(default 8 since T96n, with sheng-audio; 0 leaves the microphone off\) brings up the WCD9378 microphone path in stages: 1 rails \(ldob7, ldob8\) and codec reset \(gpio162\), 2 PRM votes and VA/TX core clocks, 3 LPI SoundWire pins and VA/TX macro clocks, 4 VA SoundWire master \(0x33b0000, v1.7\) and enumeration, 5 codec init \(SCP setup, io\_init, SDCA class load\), 6 capture path \(ports, micbias 1, SmartMIC0 sequencer, TX decimator 1 by asteroids-mic-dec\), 7 DSP capture graphs and a 2 s capture test, 8 capture for the plug-in. asteroids-mic-port = sample interval \| offset1 &lt;&lt; 8 \| lane &lt;&lt; 16 \(default 1 \| 1 &lt;&lt; 8\). asteroids-mic-mux=1 switches the VA macro to its own core clock \(0x3420000 = 1\) as the vendor clock manager does \(default off\). asteroids-mic-usage sets the SmartMIC0 ADC usage \(default 3 NORMAL; 5 ADC\_LP wants interval 3\), asteroids-mic-pageswap=0 the MIPI page order, asteroids-mic-frame=0 skips the bank switch.
 - The GPU addon carries sheng's audio server plug-in as audio/ShengAudio.driver \(scripts/build-asteroids-metal-plugin.py builds it with scripts/build-sheng-audio-hal.py unless --no-audio, and adds its CDHash to the owner trust module\); patches/xnu/zzyd-board-audio-addon-mount.patch mounts audio/ over /System/Library/Audio/Plug-Ins/HAL.
 
 ### Procedure
@@ -605,6 +629,29 @@ Collect evidence using the next action.
 - T76 \(2026-10-30\): the board classes here register through OSKextRegisterBoardClasses \(zzyg-board-class-registration.patch\), under the kext lock, in place of preModLoad/postModLoad alone, which deadlocked T75f's boot \(storage area\).
 - T76's second kernel build \(run 41111730079\) failed in ShengPlatformPower.cpp: BoardClasses.h had been included after the file's last \#include, which there sits inside the ShengPlatformPower class; every probe now includes it after its first \#include.
 - T89 \(2026-11-02\): T51's capture was digital zero after its first second, the decimator fed nothing. The probe took AMIC1 through TX SMIC MUX0 into DEC0 \(DMA channel mask 1\); the vendor's handset-mic path \(mixer\_paths\_volcano\_qrd.xml amic\_1\_3\) takes AMIC1 through TX SMIC MUX1 = SWR\_MIC0 into DEC1 and AMIC3 through SMIC MUX2 = SWR\_MIC4 into DEC2, both on TX\_AIF1\_CAP, and its default sets TX SMIC MUX0 to ZERO; the vendor TX macro passes the decimator mask as the codec DMA channel mask \(tx\_macro\_get\_channel\_map\). The VA macro's SoundWire mic clock setup for a VA-hosted master \(bolero 2.1: VA\_TOP\_CSR\_SWR\_MIC\_CTL0-2 = 0xCC\) is already in the probe. asteroids-mic-dec=&lt;n&gt; \(default 1\) picks the decimator \(mux 0x100 + 8n, path 0x400 + 0x80n\) and the capture asks for mask 1 &lt;&lt; n; \[mic port\] reads back the decimator's muxes and path, the codec's data port 1 \(PortCtrl, ChannelEn in both banks, IntStat, PrepareStatus\) and SCP\_FrameCtrl in both banks, and the master's port 1 control, 300 ms into the capture. Boot: asteroids-mic=7 asteroids-mic-capture-s=20.
+- T89mic \(2026-11-02, asteroids-mic=7 asteroids-mic-capture-s=20, kernel run 41445466871\): still digital zero after the first second \(peaks 32 then 0 for 19 s, from 22.7 s; the user made noise and silence in turns\). \[mic port\]: dec 1 with mask 0x2, TX muxes SWR\_MIC0 / SWR\_MIC and the path enabled and unmuted \(0x24\), the codec's port 1 channel 1 enabled in both banks, the master's port 1 likewise \(0x1000101\), but the codec's SCP\_FrameCtrl 0 in both banks: it frames at the default 48 rows by 2 columns while the master frames at 50 by 16 \(0x101c 0xf\). Commands ride in column 0 and work; the data port does not line up.
+- T90 \(2026-11-02\): after the port setup the probe writes the master's bank 1 frame \(0x105c\) like bank 0 and broadcasts SCP\_FrameCtrl\_B1 = the same shape \(device 15\), mainline's sdw\_bank\_switch with qcom\_swrm\_pre\_bank\_switch, so the codec and the master switch to bank 1 at 50 rows by 16 columns together. asteroids-mic-frame=0 skips it. \[mic port\] then reads SCP\_FrameCtrl bank 1 as 0xf.
+- T90mic \(2026-11-02, capture 30 s from 43.1 s\): unchanged: peaks 33 then 0, the codec's SCP\_FrameCtrl still 0 in both banks and the master's MCP\_STATUS \(0x104c\) 0, bank 0. The broadcast never landed: mainline \(qcom\_swrm\_cmd\_fifo\_wr\_cmd\) sends a broadcast with command id 0xf \(SWR\_BROADCAST\_CMD\_ID\), and the probe's swrWrite gave it an ordinary id. The first T90mic boot ended in fastboot, not recovery, and was not pulled.
+- T91 \(2026-11-02\): swrWrite uses id 0xf for device 15 and waits 10 ms after the bank switch; \[mic port\] \[6\] is the master's MCP\_STATUS \(bit 0 the bank in use\) in place of its port control 2.
+- T92 \(2026-11-02, static review against the vendor master refs/nulldebris-modules swr-mstr-ctrl.c, the Volcano audio DT and sheng's working WCD938x capture\): the probe never prepared the codec's port: sheng writes DP1\_PrepareCtrl \(0x105\) before ChannelEn, and T90's DP1\_PrepareStatus read 0. T92 writes 0x105 = 1 and polls PrepareStatus for up to 10 ms before enabling the channel. Same as sheng and kept: codec HCtrl 0xff, master HCTRL 0xf0, sample interval 1. Sheng frames at 50 by 16 without a bank switch and records, so the T90/T91 bank switch is kept but may not be needed \(asteroids-mic-frame=0\). The vendor master computes a TX port's interval as 2 x bus clock / channel rate - 1 with offset1 and lane from the codec driver's table \(not in the local trees\); the Volcano VA master maps ADC1 to port 1 channel 1 \(SWRM\_TX1\_CH1\) and sets mipi-sdw-block-packing-mode 1. T91's kernel build was cancelled for T92.
+- T92mic \(2026-11-02\): still digital zero \(peaks 32 then 0, from 34.1 s\). The master is now on bank 1 \(MCP\_STATUS 1\), so the 0xf broadcast lands at the master; the codec's SCP\_FrameCtrl and DP1\_PrepareStatus still read 0.
+- Static review \(2026-11-02\), LKML WCD9378 v2 \(lkml.iu.edu/2607.3/09185.html, tested on the Fairphone 6, SM7635\): ADC1 leaves on codec port 1 channel BIT\(0\) to master port 1 channel BIT\(0\) \(no ChMap register, software only\); the TX ports are SDW\_DPN\_SIMPLE with simple\_ch\_prep\_sm, so no prepare is needed and PrepareStatus 0 is expected \(T92's 0x105 write is harmless\); bps 1; lane\_control\_support; clock\_reg\_supported \(the core programs SCP bus-clock base/scale; without it capture is dead, per the cover letter\): the probe already writes 0x4d = 1 \(19.2 MHz\) and 0x62/0x72 = 2 \(/2\), matching a 9.6 MHz bus \(master clock divider 0 on the 9.6 MHz macro clock\). The driver writes no raw 0xe0/0xf0; the probe's 0x01 there came with the first bring-up \(b0a33bf\) without a source. Mainline sm8550 TX SoundWire \(sm8550.dtsi swr2\): the ADC ports run sample interval 1, offset1 0, on lanes 1 and 2; only the DMIC ports \(interval 3, offset1 1\) use lane 0, which also carries the command column; sheng records on lane 2. The probe ran ADC1 at interval 1 on lane 0 with offset1 1. T92l1 / T92l2: the T92 kernel with asteroids-mic-port=0x10001 / 0x20001 \(interval 1, offset 0, lane 1 / 2\).
+- T92l1 \(2026-11-02, asteroids-mic-port=0x10001\): still digital zero \(peaks 32 then 0 from 33.2 s; the run lasted 605 s and ended in fastboot\). The master's port 1 took interval 1 at offset 0 \(0x1000001\). A 150 Hz high-pass decimator turns a constant bit stream into exactly 0 after a short transient \(the first second's peak of 32 in every run\), so the decimator runs and its SWR\_MIC input is constant.
+- Static review, second pass \(2026-11-02\): the lpass-cdc TX and VA macros \(refs/nulldebris-modules lpass-cdc-tx-macro.c, -va-macro.c\) need nothing the probe lacks for a SWR\_MIC decimator on a VA-hosted master: the VA SWR\_MIC\_CTL0-2 = 0xcc \(done\), TX\_TOP\_CSR\_SWR\_CTRL only cleared at power-down, the amic TX hold clear is the codec's ANA\_TX\_CH2 HPF init bit \(done\). The LKML driver's codec writes match: io\_init \(TXFE\_DIV bypass, TX support clock, PDM watchdog, SM0-2 micbias selects\), SmartMIC0 usage 0x05 \(ADC\_LP\), IT11\_MICB 0x05 \(WCD9378\_MICB\_USAGE\_2P75V for the board's 2750 mV micbias 1\), PS0 request. Left: the lane \(T92l2 next\), offset, the probe's unsourced 0xe0/0xf0 write, and the T90 bank switch.
+- T92l2 \(2026-11-02, asteroids-mic-port=0x20001, lane 2 as sheng\): still digital zero \(peaks 32 then 0 from 33.2 s; again via fastboot, then recovery on its own\). Third review pass, lpass-cdc TX decimator power-up: CFG0 bit 7 clear for an analog SWR mic \(0x50 here\), DEC mode ADC\_DEFAULT \(no mixer path sets TX DEC MODE\), 150 Hz high-pass so no gate sequence, clock enable 0x20 and rate 4 \(48 kHz\) in PATH\_CTL, TX SWR\_INPUT is a plain input pin, and the TX macro never touches its SWR\_CONTROL \(only the VA macro does\). The macro side matches the vendor driver throughout; the constant input is on the codec or bus side.
+- Stock modules \(2026-11-02\): recovery's kernel loads only gpr and spf\_core \(no sound card\), so vendor\_dlkm\_a was read out of super read-only \(dd of sectors 18504096 + 162696 from the LP metadata; local/stock/vendor\_dlkm\_a.img, ext4\) for the stock wcd9378\_dlkm.ko, swr\_ctrl\_dlkm.ko, lpass\_cdc\_\*\_dlkm.ko and machine\_dlkm.ko \(no source\). The Volcano codec node \(volcano-audio-overlay.dtsi wcd9378-codec\) maps ADC1 to codec port index 0, mask 0x1, SWRM\_TX1\_CH1, and qcom,swr-tx-port-params gives &lt;offset1 lane&gt; for four use cases of four ports: use case 0 \(9.6 MHz bus\) port 1 = OFFSET1\_VAL1 LANE0, the probe's original values; use case 1 \(4.8 MHz\) port 1 = VAL0 LANE1.
+- Sample interval: the vendor master takes 2 x bus clock / channel rate - 1, and Qualcomm's WCD937x-family drivers give an ADC port 4.8 MHz in ADC\_LP and 9.6 MHz in NORMAL/HIFI; the LKML WCD9378 driver uses NORMAL on a 9.6 MHz bus with mainline's interval 1. The probe ran ADC\_LP \(SmartMIC usage 0x05, as the vendor's TX0 MODE ADC\_LP\) with interval 1, the NORMAL timing. T92s3: the T92 kernel with asteroids-mic-port=0x103 \(interval 3, offset 1, lane 0\): LP with LP timing on use case 0.
+- T92s3 \(2026-11-02, asteroids-mic-port=0x103\): still digital zero \(peaks 32 then 0 from 33.9 s\); the master took interval 3 \(0x1000103\). Every port timing tried \(interval 1 and 3, offsets 0 and 1, lanes 0-2\) gives the same constant input, so the codec most likely sends nothing.
+- T93 \(2026-11-02\): \[mic codec\] reads the codec's state 300 ms into the capture: TX sequencer 0 status \(SEQ\_TX0\_STAT\), SmartMIC0 FUNC\_STAT, PDE11 actual and requested power state, IT11 usage and micbias, SYS\_USAGE\_CTRL, TX\_NEW\_CH12\_MUX, ANA\_TX\_CH1/CH2, CDC\_ANA\_TX\_CLK\_CTL, CDC\_AMIC\_CTL, TXFE\_DIV\_CTL, PDM\_WD\_CTL0, SM0\_MB\_SEL and MB\_PULLUP\_EN. asteroids-mic-usage=&lt;n&gt; \(default 0x05 ADC\_LP\) sets the SmartMIC0 usage, so NORMAL \(0x03\) can run with interval 1. The probe's 0xe0/0xf0 write stays: per the user it came from the Nothing kernel or measurements in recovery. Boots: T93lp \(usage 5, port 0x103\) and T93n \(usage 3, port 0x101\).
+- T93n \(2026-11-02, NORMAL usage 3, interval 1, offset 1, lane 0\): still digital zero \(peaks 31 then 0 from 32.6 s\), and no \[mic codec\] row: it printed only when its first two words were nonzero, and a failed read gives 0xff, so every paged codec read returned 0, the usage register written 3 a moment before among them. The probe's PS0 check \(ACT\_PS 0\) since T47 therefore proves nothing.
+- T94 \(2026-11-02\): wcdPage writes SCP\_AddrPage1/2 before every paged access instead of caching them \(asteroids-mic-pagecache=1 restores the cache\): if the codec drops its page registers, every later paged access, writes included \(micbias, usage, PS0 request\), lands on page 0, which would leave the ADC off. \[mic codec\] now prints whenever \[mic port\] does.
+- T94n \(2026-11-02\): still digital zero \(peaks 30 then 0 from 33.3 s\), and \[mic codec\] read 0 in every byte with the page registers written before each access. The \[mic\] row's /10 is the device id's high word \(DT reg &lt;0x10 0x01170223&gt;\), not a paged read, and efuse=0 is a paged read: no paged codec read has returned data since T47, so the codec's paged writes \(io\_init, class load, micbias, usage, PS0 request\) may never have landed either, which would leave its ADC off. The Qualcomm paging patch the LKML WCD9378 series depends on \(soundwire: qcom: add SCP address paging support, 999f80904763, lkml.iu.edu/2607.1/13485.html\) programs SCP\_AddrPage1/2 and sets bit 15 of the wire address, as the probe does.
+- T95 \(2026-11-02\): \[mic page\]: SCP\_AddrPage1/2 read back after setting them for ANA\_TX\_CH1 \(beside the values written\), the raw read FIFO word of that paged read, the master's interrupt status \(0x200\) before and after it, DEV\_VER \(0x40100070\) through paging, ANA\_TX\_CH1, the unpaged SCP\_DevId\_0 and the failed reads.
+- T95's first kernel build \(run 41485458782\) failed: the \[mic page\] block declared failed a second time in micPortSnapshot; it counts in pageFailed now.
+- T95n \(2026-11-03\): \[mic page\] back/wrote 80308030: SCP 0x48/0x49 read back 0x30/0x80, exactly as written for ANA\_TX\_CH1 \(0x4018000e\); the paged read's FIFO word 0xa00 \(data 0, its own id\), interrupt status 0x6 before and after \(no command error\), DEV\_VER and the ADC gain 0 through paging while the unpaged SCP\_DevId reads 0x23. The paged space answers but holds nothing: the address is wrong, not the bus.
+- T96 \(2026-11-03\): the page register order. Qualcomm's regmap-swr \(refs/nulldebris-modules soc/regmap-swr.c, the stock driver's path\) writes address bits 30:23 \(mask 0x7f800000\) to SCP 0x48 and bits 22:15 \(0x007f8000\) to 0x49, with the low 16 bits \| 0x8000 on the wire; the probe used the MIPI header's order \(0x48 bits 22:15, 0x49 bits 30:23\) since T47, so every paged access went to an empty address \(0x0018000e for 0x4018000e\): no codec read returned data and none of its writes \(io\_init, class load, micbias, usage, PS0 request\) landed, so the ADC never ran, whatever the port timing. The stock wcd9378\_dlkm.ko uses the same 0x4018xxxx/0x41xxxxxx space \(1461 words of 0x4018xxxx\). wcdPage now uses Qualcomm's order; asteroids-mic-pageswap=0 restores the old one. Boots: T96n \(NORMAL usage 3, interval 1\) and T96lp \(LP, interval 3\).
+- T96n \(2026-11-03, NORMAL usage 3, interval 1, offset 1, lane 0, decimator 1\): the microphone records. 3000 of 3000 periods, peak 991 of 32767 \(about -30 dBFS\), mean 29, 1398442 non-zero samples; per-second peaks from 33.2 s: 448 294 35 28 36 97 319 279 140 348 321 178 113 779 560 296 573 708 128 991 744 772 325 362 329 394 315 317 381 595, rising and falling with the user's noise and silence. The codec now answers: \[mic codec\] usage 3, micbias 0x05, ANA\_TX\_CH1 0x26 \(gain 6\), TX sequencer status 2; \[mic\] efuse 0x110 \(0 before\); \[mic page\] wrote 0x80/0x30 and reads back the gain 0x26 through paging. The page register order was the fault from T47 on.
+- T97 \(2026-11-03\): the microphone is on by default: asteroids-mic defaults to 8 \(capture serves the plug-in's input stream, after the 2 s boot capture test\) and the SmartMIC0 usage to 3 \(NORMAL, with the port's default interval 1, offset 1, lane 0 and decimator 1\), the T96n combination.
 
 ### Completion criteria
 
@@ -612,16 +659,15 @@ Collect evidence using the next action.
 
 ### Current limits
 
-- The microphone does not work yet: stage 4 \(SoundWire enumeration\) fails, so the plug-in's input stream stays silent.
-- The master's port timing is not taken from the vendor driver \(not in the published tree\): asteroids-mic-port tunes it.
+- The microphone records at about -30 dBFS peak with the vendor's ADC gain 6; iOS input through the plug-in \(stage 8\) is untested since T96n \(no app on the phone to record with\).
 
 ### Next action
 
-- Boot T42 with asteroids-mic=4 and asteroids-mic-pmic=1 and read \[mic extra\]: whether the codec's LDOs are on and its reset is released tells whether stage 4 waits on the codec's power or on the bus.
+- Check recording in iOS once an app can record, then raise the ADC gain.
 
 ### Evidence
 
-- `host`: [PASS: 207 AudioReach packet checks, including the 3a's primary MI2S port and the 32-bit speaker device format.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/scripts/check-audioreach-host.py)
+- `host`: [PASS: 207 AudioReach packet checks, including the 3a's primary MI2S port and the 32-bit speaker device format.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/scripts/check-audioreach-host.py)
   Command: <code>python3 scripts/check-audioreach-host.py</code>. Revision: `b1621b32a2513ba8e2c4c599d4f4baf602a7369a`.
 - `device`: [T40k-spk-sd1: the boot tone and iOS sounds played through both speakers; \[amps\] showed the boost converters active and \[audio-io\] 8.3 M frames without gaps in 494 s.](https://github.com/rootstockos/UniXNU-asteroids/commit/b1621b32a2513ba8e2c4c599d4f4baf602a7369a)
   Command: <code>fastboot boot with boot args sheng-audio=3 asteroids-audio-i2s=0x200200 sheng-audio-tone-ms=4000</code>. Revision: `49ec1ccb18fd6b7ddd23b25b2c4ae96cd084ad1a`.
@@ -666,7 +712,7 @@ Components: `AppleKeyStoreState`.
 
 ### Evidence
 
-- `device`: [T29: with the stand-in, SpringBoard boots to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/KeyStoreProbe.cpp)
+- `device`: [T29: with the stand-in, SpringBoard boots to the first picture.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/package/KeyStoreProbe.cpp)
   Command: <code>fastboot boot local/unixnu-asteroids-t29-boot.img</code>. Revision: `adf900cf453a6b318864913757f588c9f661596f`.
 
 ## Image assembly {#packaging}
@@ -706,7 +752,7 @@ Components: `AppleKeyStoreState`.
 
 ### Evidence
 
-- `source`: [Board patch series after the arch, SoC and OS series.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/patches/xnu/series)
+- `source`: [Board patch series after the arch, SoC and OS series.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/patches/xnu/series)
 
 ## Diagnostics {#diagnostics}
 
@@ -726,6 +772,7 @@ Components: `AppleKeyStoreState`.
 
 ### Development findings
 
+- iOS 27 \(2026-11-04\): package/BootProcessWorker.c and BootReset.c are sheng's, for the source storage runtime, which on 27 also runs the process capture and the watchdog launch policy \(no BootProgress on 27\); details in the storage area.
 - Never boot a test without on-screen diagnostics: T24b had none and taught nothing.
 - T37 adds sheng's UFS diagnostic log \(BootLog.c, sheng-log=1\) through NativeUfs's log window \(the last 32 MiB of userdata\), with weak stand-ins \(BootLogStandins.c\) for the 104 references to probes this board does not build; scripts/pull-asteroids-log.py copies the window from recovery over adb and decodes it with sheng's read-sheng-log.py --decode. The unified log on Data cannot tell boots apart \(one boot UUID and clock base for every boot\).
 - T43: \[direct scanout\] adds held / timed out \(sheng-dpu-hold\).
@@ -745,6 +792,9 @@ Components: `AppleKeyStoreState`.
 - T65: \[bo pool\] in the boot log shows the GPU BO pool next to \[bo memory\]: MiB and chunks reserved, the reservation's and write-combine's IOReturn, BOs it served, BOs sent to system memory for lack of room, MiB in use and peak.
 - T73 \(2026-10-30\): until the root is mounted, the UFS log shows \[late probe\] \(bsd\_autoconf's probe step, key events and CPU clock stages\) and \[kernel threads\]: every kernel thread that keeps its stack while it waits, with name, state, wait event and unslid return addresses \(boot\_kthread\_blocked\_rows\), '\*' for bsd\_autoconf's thread.
 - T89 \(2026-11-02\): the boot log adds \[mic port\] \(native\_mic\_port: the microphone decimator, the codec's and the master's data port 1 while the capture runs; audio area\).
+- T93 \(2026-11-02\): the boot log adds \[mic codec\] \(native\_mic\_codec: the WCD9378's TX sequencer, SmartMIC0 status and power state, usage, gains, clocks and micbias while the capture runs; audio area\).
+- T94 \(2026-11-02\): \[mic codec\] prints whenever \[mic port\] does, zeros included.
+- T95 \(2026-11-02\): the boot log adds \[mic page\] \(native\_mic\_page: whether the WCD9378's paged registers answer; audio area\).
 
 ### Completion criteria
 
@@ -760,6 +810,6 @@ Components: `AppleKeyStoreState`.
 
 ### Evidence
 
-- `source`: [Live page and banner rows.](https://github.com/rootstockos/UniXNU-asteroids/blob/689c07d87c7c9f980e16aa608b8bcd8f82f2661d/package/BootProgress.c)
+- `source`: [Live page and banner rows.](https://github.com/rootstockos/UniXNU-asteroids/blob/6370e66cc460202756058ae53f73afdb69abd364/package/BootProgress.c)
 
 </div>
